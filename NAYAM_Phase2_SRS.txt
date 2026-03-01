@@ -1,0 +1,38 @@
+
+PHASE 2 – SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+
+1. PURPOSE
+Enable NAYAM to transition from structured CRUD system to structured governance intelligence system.
+
+2. FUNCTIONAL REQUIREMENTS
+
+FR2-001 Multi-Agent Orchestration
+- System shall route queries to specialized agents.
+- Agents include PolicyAgent, CitizenAgent, OperationsAgent.
+- Agent router must determine best agent using intent classification.
+
+FR2-002 Context Memory
+- System shall store conversation embeddings.
+- System shall retrieve previous context per session.
+- Memory must persist across sessions per user.
+
+FR2-003 RAG Integration
+- System shall retrieve relevant documents before answering.
+- Retrieval must use vector embeddings.
+- Retrieved context must be appended to LLM prompt.
+
+FR2-004 Human-in-the-Loop
+- AI-generated actions must require manual approval.
+- All actions must be logged.
+- System must support approval/rejection states.
+
+FR2-005 Geo-Spatial Data Foundation
+- System shall attach ward/location metadata to issues.
+- System shall generate location-based issue counts.
+- Basic heatmap-ready API endpoint required.
+
+3. NON-FUNCTIONAL REQUIREMENTS
+
+- AI responses must complete < 5 seconds.
+- All AI outputs must be logged.
+- Memory retrieval must scale to 10,000+ records.

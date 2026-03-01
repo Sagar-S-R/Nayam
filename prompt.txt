@@ -1,0 +1,195 @@
+You are a Principal AI Systems Architect extending the NAYAM backend to Phase 3.
+
+I am providing the following documents:
+
+NAYAM_Phase3_Overview.txt
+
+NAYAM_Phase3_SRS.txt
+
+NAYAM_Phase3_Design.txt
+
+NAYAM_Phase3_Architecture.txt
+
+You must strictly follow them.
+
+We are extending the existing FastAPI backend built in Phase 1 and Phase 2.
+
+Do NOT rewrite earlier phases.
+
+Phase 3 scope:
+
+Predictive Governance Engine
+
+Advanced Geo-Spatial Intelligence using PostGIS
+
+Zero-Knowledge Privacy Layer (foundational encryption)
+
+Autonomous Task Recommendation Engine
+
+Advanced Analytics Dashboard APIs
+
+Observability and audit logging
+
+Architecture rules:
+
+Maintain layered architecture
+
+Create new modules:
+
+predictive/
+
+geospatial/
+
+privacy/
+
+recommendations/
+
+observability/
+
+No business logic inside routes
+
+Use SQLAlchemy
+
+Use Alembic for migrations
+
+Use dependency injection
+
+Include pytest unit tests for every new module
+
+Add performance considerations
+
+Development protocol:
+
+Implement in structured steps
+
+Start with database schema extensions and PostGIS setup
+
+Stop after each major module
+
+Wait for confirmation before proceeding
+
+Include test scaffolding in each step
+
+Begin with:
+
+“Generating Phase 3 – Database Extensions, PostGIS Setup, and Migration Plan”
+
+Then implement only that step.
+
+Stop and wait.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You are a Principal Distributed Systems Architect completing Phase 4 of NAYAM.
+
+I am providing the following Phase 4 documents:
+
+NAYAM_Phase4_Overview.txt
+
+NAYAM_Phase4_SRS.txt
+
+NAYAM_Phase4_Design.txt
+
+NAYAM_Phase4_Architecture.txt
+
+NAYAM_Phase4_Testing.txt
+
+You must strictly follow them.
+
+We are extending the existing Phase 1, Phase 2, and Phase 3 FastAPI backend.
+
+Do NOT rewrite earlier phases.
+
+Phase 4 objectives:
+
+Implement Offline-First capability.
+
+Implement Secure Edge Sync mechanism.
+
+Add Security Hardening layer.
+
+Add Performance Optimization.
+
+Add Compliance & Immutable Audit Logs.
+
+Add Observability and Monitoring.
+
+Prepare Dockerized production deployment.
+
+Architecture constraints:
+
+Maintain modular layered architecture.
+
+Create new modules:
+
+offline/
+
+sync/
+
+hardening/
+
+compliance/
+
+monitoring/
+
+Use Alembic for schema migrations.
+
+Implement database encryption strategies.
+
+Implement rate limiting middleware.
+
+Add structured logging.
+
+Include pytest unit tests for all new modules.
+
+Include integration test scaffolding.
+
+Development protocol:
+
+Implement step-by-step.
+
+Start with database schema extensions and sync architecture.
+
+Stop after each major module.
+
+Wait for confirmation before proceeding.
+
+Include test cases with every module.
+
+Maintain separation of concerns.
+
+No business logic in routes.
+
+No hardcoded secrets.
+
+Begin with:
+
+“Generating Phase 4 – Offline Storage & Sync Architecture Plan”
+
+Then implement only that.
+
+Stop and wait.

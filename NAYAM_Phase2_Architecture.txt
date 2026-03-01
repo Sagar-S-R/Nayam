@@ -1,0 +1,33 @@
+
+PHASE 2 – ARCHITECTURE DOCUMENT
+
+HIGH-LEVEL FLOW:
+
+User Query
+  ↓
+Agent Router
+  ↓
+Selected Agent
+  ↓
+Context Memory Retrieval
+  ↓
+RAG Document Retrieval
+  ↓
+LLM Response
+  ↓
+Human Approval Layer
+  ↓
+Dashboard Update
+
+DATABASE EXTENSIONS:
+
+Tables:
+- conversations
+- embeddings
+- action_requests
+
+SYSTEM MODULES:
+- agents/
+- memory/
+- rag/
+- approvals/

@@ -1,0 +1,86 @@
+# NAYAM (नयम्) — Docker Compose (Production)
+# =====================================================================
+# Usage:
+#   docker compose up -d --build
+#   docker compose exec app alembic upgrade head
+#   docker compose logs -f app
+
+services:
+  # ── PostgreSQL Database ────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nayam_user
+      POSTGRES_PASSWORD: nayam_password
+      POSTGRES_DB: nayam_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nayam_user -d nayam_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── NAYAM FastAPI Backend ──────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      APP_VERSION: "4.0.0"
+      DATABASE_URL: postgresql://nayam_user:nayam_password@db:5432/nayam_db
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-CHANGE_ME_IN_PRODUCTION}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:-}"
+      RATE_LIMIT_REQUESTS: "100"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+      ENFORCE_HTTPS: "true"
+      ENABLE_PERFORMANCE_TRACKING: "true"
+      ENABLE_AUDIT_LOGGING: "true"
+      ALLOWED_ORIGINS: "https://nayam.gov.in,http://localhost:3000"
+    volumes:
+      - uploads:/app/uploads
+      - exports:/app/exports
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+    driver: local
+  uploads:
+    driver: local
+  exports:
+    driver: local

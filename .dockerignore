@@ -1,0 +1,53 @@
+# NAYAM — Docker Build Context Exclusions
+# =========================================
+
+# Version control
+.git
+.gitignore
+
+# Virtual environment
+.venv
+venv
+env
+
+# Python caches
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.eggs
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Tests (not needed in production image)
+tests/
+.pytest_cache
+
+# Documentation / design docs
+*.txt
+*.md
+docs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets injected at runtime)
+.env
+.env.*
+
+# Docker build artifacts
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Uploads and exports (mounted as volumes)
+uploads/
+exports/
+
+# CI/CD
+.github/
