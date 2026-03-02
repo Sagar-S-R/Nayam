@@ -2,7 +2,7 @@
 
 > **AI Co-Pilot Platform for Public Leaders & Municipal Administrators**
 >
-> Version 1.0.0 | Python 3.13 | FastAPI 0.104 | Next.js 16 | Groq LLM | TF-IDF RAG
+> Version 2.0.0 | Python 3.13 | FastAPI 0.104 | Next.js 16 | Groq LLM | TF-IDF RAG | Whisper STT
 
 ---
 
@@ -29,6 +29,7 @@
    - 4.6 [Conversation Memory](#46-conversation-memory)
    - 4.7 [Agent Orchestration](#47-agent-orchestration)
    - 4.8 [Speech-to-Text (STT) Pipeline](#48-speech-to-text-stt-pipeline)
+   - 4.9 [AI Draft Generator](#49-ai-draft-generator)
 5. [Human-in-the-Loop (HITL) Approval System](#5-human-in-the-loop-hitl-approval-system)
 6. [Frontend Implementation](#6-frontend-implementation)
    - 6.1 [Technology Stack](#61-technology-stack)
@@ -41,6 +42,8 @@
    - 7.2 [Monitoring & Observability](#72-monitoring--observability)
    - 7.3 [Rate Limiting & Security Hardening](#73-rate-limiting--security-hardening)
    - 7.4 [Offline-First & Edge Sync](#74-offline-first--edge-sync)
+   - 7.5 [Schedule Management](#75-schedule-management)
+   - 7.6 [Notification System](#76-notification-system)
 8. [Database Design](#8-database-design)
 9. [API Reference](#9-api-reference)
 10. [Deployment](#10-deployment)
@@ -58,8 +61,9 @@
 1. **AI-Augmented, Not AI-Autonomous** — Every AI-proposed action requires explicit human approval (Human-in-the-Loop). The system advises; humans decide.
 2. **Multi-Agent Specialization** — Three domain-specific agents (Policy, Citizen, Operations) each trained with contextual prompts and routed via intent classification.
 3. **Document-Grounded Intelligence** — All LLM responses are grounded in uploaded governance documents via RAG, reducing hallucination and improving factual accuracy.
-4. **Speech-Ready Architecture** — The platform is architecturally designed to accept voice input via STT engines (Whisper, Deepgram), with transcripts feeding directly into the existing RAG pipeline.
-5. **Enterprise-Grade Security** — JWT authentication, role-based access control (RBAC), per-IP rate limiting, structured audit logging, and encrypted PII fields.
+4. **Voice-First Accessibility** — Fully implemented STT pipeline (Groq Whisper → local faster-whisper → OpenAI) enables voice input for queries, document creation, and issue filing.
+5. **AI Content Generation** — LLM-powered draft generator produces 9 types of government documents (speeches, responses, circulars, etc.) with template prompts, tone/audience control, and versioned editing.
+6. **Enterprise-Grade Security** — JWT authentication, role-based access control (RBAC), per-IP rate limiting, structured audit logging, and encrypted PII fields.
 
 ### What the Platform Does
 
@@ -70,10 +74,13 @@
 | **Document Intelligence** | Upload PDF/DOCX/TXT, auto-extract text, AI-summarize, and index for RAG retrieval |
 | **AI Chat** | Natural language queries answered by specialized agents with document-grounded responses |
 | **HITL Approvals** | Review, approve, or reject every AI-proposed action before execution |
+| **Speech-to-Text** | Multi-provider STT pipeline: transcribe, classify content type, and intelligently ingest voice into the platform |
+| **AI Draft Generator** | LLM-powered generation of 9 document types with template system prompts, tone/audience controls, versioned editing, and publish workflow |
+| **Schedule Management** | Full calendar/event system with 7 event types, 3 priority levels, status lifecycle, department/ward assignment, and 48-hour smart notifications |
+| **Smart Notifications** | Aggregated feed from 4 sources: pending approvals, high-priority issues, recent documents, upcoming events |
 | **Dashboards** | Real-time aggregated statistics by department, status, ward |
 | **Geo-Analytics** | Ward-level risk heatmaps combining issue volume and severity |
 | **Predictive Insights** | 4-week forecasting of issue trends per ward with anomaly detection |
-| **Voice Input (STT)** | Architecture-ready pipeline for speech-to-text transcription feeding into RAG |
 
 ---
 
@@ -92,9 +99,12 @@
 │   ┌──────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐           │
 │   │Issues    │ │Approvals│ │Geo-Analyt│ │Predictive│           │
 │   └──────────┘ └────────┘ └──────────┘ └──────────┘           │
-│   ┌──────────┐ ┌────────┐ ┌──────────┐                        │
-│   │Compliance│ │Monitor │ │Settings  │                        │
-│   └──────────┘ └────────┘ └──────────┘                        │
+│   ┌──────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐           │
+│   │Schedule  │ │Drafts  │ │Compliance│ │Monitor   │           │
+│   └──────────┘ └────────┘ └──────────┘ └──────────┘           │
+│   ┌──────────┐ 🔔 Notification Bell                            │
+│   │Settings  │                                                 │
+│   └──────────┘                                                 │
 └─────────────────────────────┬───────────────────────────────────┘
                               │ HTTP/REST (JSON)
 ┌─────────────────────────────▼───────────────────────────────────┐
@@ -107,10 +117,11 @@
 │  │  │ CORS → TrailingSlash → RateLimit → RequestLogging  │  │   │
 │  │  └────────────────────────────────────────────────────┘  │   │
 │  │                                                           │   │
-│  │  12 API Routers:                                         │   │
+│  │  12 API Routers + 4 New Routers = 16 Total:                │   │
 │  │  auth │ citizens │ issues │ documents │ dashboard        │   │
-│  │  agent │ actions │ sync │ offline │ compliance           │   │
-│  │  monitoring │ hardening                                   │   │
+│  │  agent │ actions │ stt │ notifications │ schedule        │   │
+│  │  drafts │ sync │ offline │ compliance │ monitoring       │   │
+│  │  hardening                                                │   │
 │  │                                                           │   │
 │  │  Service Layer → Repository Layer → SQLAlchemy ORM       │   │
 │  └───────────────────────────────────────────────────────────┘   │
@@ -132,9 +143,9 @@
 │  │  │ Query → TfidfVectorizer → cosine_sim → top-K    │     │   │
 │  │  └─────────────────────────────────────────────────┘     │   │
 │  │                                                           │   │
-│  │  ┌─── STT Pipeline (Architecture Ready) ───────────┐     │   │
-│  │  │ Mic → Audio → Whisper/Deepgram → Transcript      │     │   │
-│  │  │ Transcript → chunk_text() → store_embedding()    │     │   │
+│  │  ┌─── STT Pipeline (Fully Implemented) ────────────┐     │   │
+│  │  │ Mic → Audio → Groq Whisper / faster-whisper      │     │   │
+│  │  │ Transcript → Classify → Ingest → RAG Store       │     │   │
 │  │  └─────────────────────────────────────────────────┘     │   │
 │  └───────────────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────────────┘
@@ -145,7 +156,7 @@
 │  SQLite (development) / PostgreSQL 16 (production)              │
 │                                                                  │
 │  Tables: users, citizens, issues, documents, conversations,     │
-│  embeddings, action_requests, + subsystem tables                │
+│  embeddings, action_requests, events, drafts, + subsystem tables │
 │                                                                  │
 │  File Storage: ./uploads/ (UUID-named files)                    │
 └─────────────────────────────────────────────────────────────────┘
@@ -178,21 +189,25 @@ The application factory creates a FastAPI instance with:
 4. **Request Logging Middleware** — X-Request-ID correlation for distributed tracing
 5. **Structured Logging** — JSON output in production via structlog
 
-**Router Registration** — 12 API routers are mounted under `/api/v1/`:
+**Router Registration** — 16 API routers are mounted under `/api/v1/`:
 
 ```python
-app.include_router(auth.router,       prefix="/api/v1/auth",       tags=["Authentication"])
-app.include_router(citizens.router,   prefix="/api/v1/citizens",   tags=["Citizens"])
-app.include_router(issues.router,     prefix="/api/v1/issues",     tags=["Issues"])
-app.include_router(documents.router,  prefix="/api/v1/documents",  tags=["Documents"])
-app.include_router(dashboard.router,  prefix="/api/v1/dashboard",  tags=["Dashboard"])
-app.include_router(agent.router,      prefix="/api/v1/agent",      tags=["AI Agent"])
-app.include_router(actions.router,    prefix="/api/v1/actions",    tags=["Actions"])
-app.include_router(sync.router,       prefix="/api/v1/sync",       tags=["Sync"])
-app.include_router(offline.router,    prefix="/api/v1/offline",    tags=["Offline"])
-app.include_router(compliance.router, prefix="/api/v1/compliance", tags=["Compliance"])
-app.include_router(monitoring.router, prefix="/api/v1/monitoring", tags=["Monitoring"])
-app.include_router(hardening.router,  prefix="/api/v1/hardening",  tags=["Hardening"])
+app.include_router(auth.router,          prefix="/api/v1/auth",          tags=["Authentication"])
+app.include_router(citizens.router,      prefix="/api/v1/citizens",      tags=["Citizens"])
+app.include_router(issues.router,        prefix="/api/v1/issues",        tags=["Issues"])
+app.include_router(documents.router,     prefix="/api/v1/documents",     tags=["Documents"])
+app.include_router(dashboard.router,     prefix="/api/v1/dashboard",     tags=["Dashboard"])
+app.include_router(agent.router,         prefix="/api/v1/agent",         tags=["AI Agent"])
+app.include_router(actions.router,       prefix="/api/v1/actions",       tags=["Actions"])
+app.include_router(stt.router,           prefix="/api/v1/stt",           tags=["Speech-to-Text"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
+app.include_router(schedule.router,      prefix="/api/v1/schedule",      tags=["Schedule"])
+app.include_router(drafts.router,        prefix="/api/v1/drafts",        tags=["Drafts"])
+app.include_router(sync.router,          prefix="/api/v1/sync",          tags=["Sync"])
+app.include_router(offline.router,       prefix="/api/v1/offline",       tags=["Offline"])
+app.include_router(compliance.router,    prefix="/api/v1/compliance",    tags=["Compliance"])
+app.include_router(monitoring.router,    prefix="/api/v1/monitoring",    tags=["Monitoring"])
+app.include_router(hardening.router,     prefix="/api/v1/hardening",     tags=["Hardening"])
 ```
 
 **Startup Events:**
@@ -374,6 +389,51 @@ All models use UUID primary keys and timezone-aware `DateTime` columns.
 | `created_at` | DateTime(tz) | NOT NULL |
 | `reviewed_at` | DateTime(tz) | nullable |
 
+#### Event Model (`app/models/event.py`)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | UUID | PK |
+| `title` | String(255) | NOT NULL |
+| `description` | Text | nullable |
+| `event_type` | Enum(Meeting/Hearing/Site Visit/Deadline/Review/Public Event/Other) | NOT NULL |
+| `status` | Enum(Scheduled/In Progress/Completed/Cancelled) | NOT NULL, default Scheduled |
+| `priority` | Enum(Low/Medium/High) | NOT NULL, default Medium |
+| `start_time` | DateTime(tz) | NOT NULL |
+| `end_time` | DateTime(tz) | nullable |
+| `location` | String(500) | nullable |
+| `attendees` | Text | nullable (comma-separated) |
+| `department` | String(255) | nullable, indexed |
+| `ward` | String(100) | nullable |
+| `reminder_minutes` | Integer | default 30 |
+| `is_all_day` | Boolean | default False |
+| `created_by` | UUID | FK → users.id |
+| `created_at` | DateTime(tz) | NOT NULL |
+| `updated_at` | DateTime(tz) | NOT NULL, auto-updated |
+
+**Indexes:** `start_time`, `status`, `event_type`, `department`
+
+#### Draft Model (`app/models/draft.py`)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | UUID | PK |
+| `title` | String(500) | NOT NULL |
+| `draft_type` | Enum(Speech/Official Response/Press Release/Policy Brief/Meeting Agenda/Public Notice/Formal Letter/RTI Response/Government Circular) | NOT NULL |
+| `status` | Enum(Generating/Draft/Under Review/Approved/Published) | NOT NULL, default Draft |
+| `content` | Text | nullable (filled after generation) |
+| `prompt_context` | Text | nullable (original topic/instructions) |
+| `tone` | String(100) | nullable (formal/empathetic/assertive/etc.) |
+| `audience` | String(255) | nullable (target audience description) |
+| `department` | String(255) | nullable, indexed |
+| `version` | Integer | NOT NULL, default 1 (auto-incremented on edit) |
+| `extra_metadata` | JSON | nullable (word_count, language, ai_generated, etc.) |
+| `created_by` | UUID | FK → users.id |
+| `created_at` | DateTime(tz) | NOT NULL |
+| `updated_at` | DateTime(tz) | NOT NULL, auto-updated |
+
+**Indexes:** `draft_type`, `status`, `department`
+
 ### 3.6 Pydantic Schemas
 
 All schemas use Pydantic v2 with `model_config = {"from_attributes": True}` for ORM compatibility.
@@ -386,6 +446,10 @@ All schemas use Pydantic v2 with `model_config = {"from_attributes": True}` for 
 - **Dashboard:** `DepartmentCount`, `StatusCount`, `RecentDocument`, `DashboardResponse`
 - **Agent:** `AgentQueryRequest`, `AgentQueryResponse`, `AgentListResponse`, `AgentInfo`, `SessionHistoryResponse`, `SessionHistoryMessage`
 - **ActionRequest:** `ActionReviewRequest`, `ActionRequestResponse`, `ActionRequestListResponse`
+- **Event:** `EventCreateRequest`, `EventUpdateRequest`, `EventResponse`, `EventListResponse`
+- **Draft:** `DraftGenerateRequest` (draft_type, topic, tone, audience, department, additional_context), `DraftUpdateRequest`, `DraftResponse`, `DraftListResponse`
+- **STT:** `TranscribeResponse`, `TranscribeAndClassifyResponse`, `TranscribeAndIngestResponse`
+- **Notification:** `NotificationItem`, `NotificationsResponse`
 
 **Validation Rules (examples):**
 - `name`: min 2 chars, max 255
@@ -406,6 +470,8 @@ IssueRepository     → Issue CRUD + status/priority/department filtering + date
 DocumentRepository  → Document CRUD + paginated listing
 ConversationRepository → Session history + user session listing + session deletion
 EmbeddingRepository    → Create + content hash dedup check + similarity search
+EventRepository     → Event CRUD + status/type/department filtering + date range + upcoming()
+DraftRepository     → Draft CRUD + type/status/department filtering
 ```
 
 All repositories accept a `Session` and provide typed methods returning ORM objects.
@@ -424,6 +490,10 @@ Services implement business logic on top of repositories:
 | `AgentService` | `app/services/agent.py` | Full query orchestration pipeline |
 | `MemoryService` | `app/services/memory.py` | Conversation storage + TF-IDF search |
 | `ApprovalService` | `app/services/approval.py` | Action request lifecycle |
+| `STTService` | `app/services/stt.py` | Multi-provider speech-to-text (Groq → local → OpenAI) |
+| `NotificationService` | `app/services/notification.py` | Aggregates 4 notification sources |
+| `ScheduleService` | `app/services/schedule.py` | Event/calendar CRUD + upcoming |
+| `DraftService` | `app/services/draft.py` | LLM-powered draft generation (9 templates) |
 
 ### 3.9 API Routers
 
@@ -735,142 +805,127 @@ Return: {session_id, agent_name, response, confidence,
 
 ### 4.8 Speech-to-Text (STT) Pipeline
 
-The NAYAM platform is architecturally designed to accept voice input from users (municipal leaders, citizens at help desks, field workers). The STT pipeline is a natural extension of the existing document processing infrastructure.
+The NAYAM platform has a **fully implemented** multi-provider STT pipeline for accepting voice input from users (municipal leaders, citizens at help desks, field workers).
 
-#### Architecture Design
+**File:** `app/services/stt.py` (~790 lines) | `app/api/v1/stt.py` (3 endpoints)
+
+#### Provider Chain (Automatic Fallback)
+
+| Priority | Provider | Latency | Offline | Condition |
+|----------|---------|---------|---------|-----------|
+| 1 | **Groq Whisper** | ~1s | No | `GROQ_API_KEY` set (primary) |
+| 2 | **Local faster-whisper** | ~5-10s | Yes ✓ | `faster-whisper` installed (CPU/int8, `small` model) |
+| 3 | **OpenAI Whisper API** | ~2-3s | No | `OPENAI_API_KEY` set (last resort) |
+
+#### Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    STT PIPELINE                               │
+│                    STT PIPELINE (Implemented)                  │
 │                                                              │
+│  🎤 Frontend Mic Buttons (Intelligence + Documents pages)    │
+│         │                                                    │
+│         ▼                                                    │
 │  ┌─────────────────┐                                        │
-│  │  Audio Capture   │  ← Browser MediaRecorder API          │
-│  │  (.wav/.mp3/     │     or mobile app recording           │
-│  │   streaming)     │                                        │
+│  │  Audio Capture   │  ← MediaRecorder API (.webm/.wav)     │
 │  └────────┬────────┘                                        │
 │           │                                                  │
 │           ▼                                                  │
-│  ┌─────────────────┐                                        │
-│  │  STT Engine      │  ← Pluggable provider:                │
-│  │                  │     • OpenAI Whisper API               │
-│  │                  │     • Groq Whisper (same SDK)          │
-│  │                  │     • Deepgram (streaming support)     │
-│  │                  │     • Local Whisper (offline mode)     │
-│  └────────┬────────┘                                        │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │  Provider Selection (automatic fallback chain)   │        │
+│  │  Groq Whisper → local faster-whisper → OpenAI   │        │
+│  └────────┬────────────────────────────────────────┘        │
 │           │                                                  │
 │           ▼                                                  │
 │  ┌─────────────────┐                                        │
-│  │  Transcript Text │  ← Raw transcription output           │
+│  │  Transcript +    │                                        │
+│  │  Language +      │  ← STT result                         │
+│  │  Duration        │                                        │
 │  └────────┬────────┘                                        │
 │           │                                                  │
-│           ├──────────────────────────────────┐               │
-│           │                                  │               │
-│           ▼                                  ▼               │
-│  ┌─────────────────┐                ┌──────────────────┐    │
-│  │  Direct Query    │                │  RAG Storage     │    │
-│  │  to Agent        │                │  chunk_text()    │    │
-│  │  (real-time Q&A) │                │  store_embedding │    │
-│  └─────────────────┘                └──────────────────┘    │
+│           ├── /transcribe ──▶ Returns text only              │
+│           ├── /classify ────▶ + LLM content classification   │
+│           └── /ingest ──────▶ + Create entity + RAG index    │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-#### Two Modes of Operation
+#### Three API Endpoints
 
-**Mode 1: Real-Time Voice Query**
-```
-User speaks → STT → text → POST /api/v1/agent/query → AI response
-```
-The frontend captures audio, sends it to the STT engine, and submits the resulting text as a regular agent query. This requires no backend changes — only a frontend audio capture component and STT API call.
+| Endpoint | Purpose | Flow |
+|----------|---------|------|
+| `POST /api/v1/stt/transcribe` | Transcription only | Audio → STT → text + language + duration |
+| `POST /api/v1/stt/classify` | Transcribe + classify | Audio → STT → LLM classifies content type (issue, document, query) |
+| `POST /api/v1/stt/ingest` | Full pipeline | Audio → STT → Classify → Create entity (issue/document) → RAG index |
 
-**Mode 2: Voice Document Upload**
-```
-User speaks → STT → transcript → chunk_text() → store_embedding() → RAG searchable
-```
-Spoken content (e.g., meeting minutes, field reports, verbal complaints) is transcribed and stored in the embeddings table exactly like text documents. The existing `chunk_text()` function handles the splitting, and `store_embedding()` handles SHA-256 dedup and storage.
-
-#### Frontend Integration Points
-
-The frontend would add a microphone button component:
-
-```
-┌────────────────────────────────────────┐
-│  Intelligence (Chat) Page              │
-│                                        │
-│  ┌──────────────────────────────────┐  │
-│  │  [Type your query here...] [🎤]  │  │
-│  └──────────────────────────────────┘  │
-│                                        │
-│  🎤 Click → Start Recording            │
-│  🎤 Click again → Stop → Transcribe    │
-│  📝 Transcript fills input field       │
-│  ⏎  User sends as regular text query   │
-└────────────────────────────────────────┘
-```
-
-**Technical Flow:**
-1. `navigator.mediaDevices.getUserMedia({ audio: true })` — Request mic permission
-2. `MediaRecorder` API captures audio chunks
-3. Audio blob sent to STT API (Whisper/Deepgram/Groq)
-4. Transcript returned as text
-5. Text inserted into chat input or directly submitted
-
-#### Backend Extension Points
-
-The backend already has all the infrastructure:
-
-| Existing Component | STT Usage |
-|---|---|
-| `chunk_text()` | Chunks transcripts for RAG storage |
-| `store_embedding()` | Stores transcript chunks with `source_type="voice_transcript"` |
-| `search_by_text()` | TF-IDF search finds relevant voice transcripts alongside documents |
-| `process_query()` | Accepts text from any source — keyboard or STT |
-
-The only new backend code needed:
-
-```python
-# app/services/stt.py (planned)
-class STTService:
-    """Transcribes audio files using configurable STT provider."""
-
-    async def transcribe(self, audio_file: UploadFile) -> str:
-        """
-        Transcribe audio to text.
-        Provider selection: GROQ_API_KEY → Groq Whisper
-                           OPENAI_API_KEY → OpenAI Whisper
-                           else → Local Whisper
-        """
-        ...
-
-# app/api/v1/stt.py (planned)
-@router.post("/transcribe")
-async def transcribe_audio(file: UploadFile):
-    """Accept audio file, return transcript text."""
-    ...
-
-@router.post("/transcribe-and-store")
-async def transcribe_and_store(file: UploadFile):
-    """Accept audio file, transcribe, chunk, and store for RAG."""
-    ...
-```
-
-#### Supported STT Providers (Planned)
-
-| Provider | Latency | Quality | Cost | Offline |
-|----------|---------|---------|------|---------|
-| **Groq Whisper** | ~1s | High | Free tier available | No |
-| **OpenAI Whisper API** | ~2-3s | High | $0.006/min | No |
-| **Deepgram** | ~0.5s (streaming) | High | Free tier available | No |
-| **Local Whisper** | ~5-10s | High | Free | Yes ✓ |
+**Supported formats:** `.wav`, `.mp3`, `.m4a`, `.ogg`, `.webm`, `.flac`, `.aac` (max 25 MB)
 
 #### Language Support
 
-Whisper models support 100+ languages including:
-- **Hindi** (primary for NAYAM's municipal context)
-- **English** (secondary)
-- **Regional Indian languages** (Marathi, Gujarati, Tamil, etc.)
+Whisper models support 100+ languages including Hindi (primary for NAYAM's municipal context), English (secondary), and regional Indian languages (Marathi, Gujarati, Tamil, etc.).
 
-This multilingual support is critical for a governance platform serving diverse communities.
+#### Frontend Integration
+
+Microphone buttons (🎤) are available on:
+- **Intelligence page** — Voice queries sent directly to AI agents
+- **Documents page** — Voice recordings transcribed and stored as documents with RAG indexing
+
+### 4.9 AI Draft Generator
+
+**Files:** `app/services/draft.py` (245 lines) | `app/api/v1/drafts.py` | `app/models/draft.py`
+
+The Draft Generator is an LLM-powered content creation system that produces 9 types of government documents using template system prompts.
+
+#### Template System
+
+Each draft type has a specialized system prompt with `{tone}` and `{audience}` placeholders:
+
+| Draft Type | Template Focus | Example Output |
+|-----------|----------------|----------------|
+| **Speech** | 3-5 min, compelling opening, talking points, memorable closing | Inaugural address, policy announcement |
+| **Official Response** | Clear, authoritative, action-oriented with reference numbers | Reply to citizen complaint, inter-department memo |
+| **Press Release** | Headline, dateline, lead paragraph, body quotes, boilerplate | New scheme announcement, project completion |
+| **Policy Brief** | Executive Summary → Background → Findings → Options → Recommendation | Water conservation policy, urban planning brief |
+| **Meeting Agenda** | Numbered items, time allocations, responsible persons, outcomes | Municipal council meeting, review meeting |
+| **Public Notice** | Effective date, rules, compliance requirements, contact info | Road closure notice, new regulation |
+| **Formal Letter** | Proper salutation, reference line, subject, formal closing | Letter to state government, inter-department |
+| **RTI Response** | RTI Act 2005 sections, transparency, exemption reasons | Response to information request |
+| **Government Circular** | Circular number, instructions, compliance deadline, authority | Internal policy circular |
+
+#### Generation Flow
+
+```
+POST /api/v1/drafts/generate
+  │
+  ▼
+DraftGenerateRequest {draft_type, topic, tone, audience, department, additional_context}
+  │
+  ▼
+Select template system prompt → format with tone + audience
+  │
+  ▼
+Groq LLM (llama-3.3-70b-versatile, temperature=0.7, max_tokens=2000)
+  │
+  ▼
+Draft created: content + word_count + version=1 + status=DRAFT
+  │
+  ▼
+Edit → version auto-increment → Submit for Review → Approve → Publish
+```
+
+#### Draft Lifecycle
+
+```
+GENERATING → DRAFT → UNDER_REVIEW → APPROVED → PUBLISHED
+```
+
+- **GENERATING** — LLM is producing content
+- **DRAFT** — Content ready, editable by creator
+- **UNDER_REVIEW** — Submitted for supervisory review
+- **APPROVED** — Cleared for publication
+- **PUBLISHED** — Final, read-only
+
+Each content edit auto-increments the `version` integer for audit tracking.
 
 ---
 
@@ -945,8 +1000,10 @@ PENDING ──▶ APPROVED ──▶ (Action Executed)
 | **Dashboard** | `/` | Total issues, citizens, documents; department breakdown; status distribution; recent documents |
 | **Citizens** | `/citizens` | Paginated citizen list with ward filter; create/edit dialogs |
 | **Issues** | `/issues` | Issue list with status/priority/department filters; create with citizen selector; status updates |
-| **Documents** | `/documents` | Document list with file upload dialog; shows extracted text + AI summary; supports PDF/DOCX/TXT |
-| **Intelligence** | `/intelligence` | AI chat interface; session management; agent selector; real-time streaming responses |
+| **Documents** | `/documents` | Document list with file upload dialog; shows extracted text + AI summary; supports PDF/DOCX/TXT; 🎤 voice recording |
+| **Intelligence** | `/intelligence` | AI chat interface; session management; agent selector; real-time streaming responses; 🎤 voice input |
+| **Schedule** | `/schedule` | Calendar event management; stats cards (upcoming/today/high priority); filters (type/status/department); event CRUD with detail dialog; status workflow (Start/Complete/Cancel) |
+| **Drafts** | `/drafts` | AI draft generation; 9 template quick-generate cards; stats (total/AI-generated/under review); generate dialog with tone/audience/context; view/edit with version tracking; copy to clipboard; publish workflow |
 | **Approvals** | `/approvals` | Pending action requests; approve/reject with notes; status badges (PENDING/APPROVED/REJECTED) |
 | **Geo-Analytics** | `/geo-analytics` | Ward risk heatmap; risk score formula: `(volume/maxVolume * 50) + (highPriority/total * 50)` |
 | **Predictive** | `/predictive` | 4-week forecast chart; anomaly detection (high-priority issues); ward trend lines |
@@ -976,6 +1033,15 @@ fetchDashboard()              → DashboardResponse
 sendAgentQuery(query, ...)    → AgentQueryResponse
 fetchActionRequests(...)      → ActionRequestListResponse
 reviewAction(id, approve, note) → ActionRequestResponse
+fetchEvents(skip, limit, filters)  → EventListResponse
+createEvent(data)             → EventResponse
+updateEvent(id, data)         → EventResponse
+deleteEvent(id)               → MessageResponse
+generateDraft(data)           → DraftResponse
+fetchDrafts(skip, limit, filters)  → DraftListResponse
+getDraft(id)                  → DraftResponse
+updateDraft(id, data)         → DraftResponse
+deleteDraft(id)               → MessageResponse
 ```
 
 ### 6.4 Geo-Analytics & Risk Scoring
@@ -1053,6 +1119,40 @@ Designed for field deployment where internet connectivity is intermittent:
 - **Batch Processing** — Sync operations batched (`SYNC_BATCH_SIZE=50`) for efficiency
 - **Node Identity** — Each deployment node identified by `DEFAULT_NODE_ID`
 
+### 7.5 Schedule Management
+
+**Files:** `app/models/event.py`, `app/repositories/event.py`, `app/services/schedule.py`, `app/api/v1/schedule.py`
+
+A complete calendar/event management system for public leaders and administrators:
+
+- **7 Event Types** — Meeting, Hearing, Site Visit, Deadline, Review, Public Event, Other
+- **3 Priority Levels** — Low, Medium, High
+- **4 Statuses** — Scheduled → In Progress → Completed (or Cancelled)
+- **Rich Metadata** — Location, attendees (comma-separated), department, ward, all-day toggle
+- **Reminders** — Configurable `reminder_minutes` per event (default 30)
+- **Smart Notifications** — Events within 48 hours automatically surface in the notification feed with time-until labels ("in less than 1 hour", "in 6 hours", "tomorrow")
+- **Filtering** — By status, type, department, date range
+- **Frontend** — Full CRUD with stats cards, filters, event detail dialog, create/edit dialogs, status workflow buttons
+
+### 7.6 Notification System
+
+**Files:** `app/services/notification.py`, `app/api/v1/notifications.py`, `frontend/components/nayam/notification-bell.tsx`
+
+An aggregated notification feed that pulls from 4 real-time data sources:
+
+| Source | What It Surfaces | Severity |
+|--------|-----------------|----------|
+| **Pending Approvals** | Action requests awaiting human review | Warning |
+| **High-Priority Issues** | Issues marked HIGH priority in last 7 days | Error |
+| **Recent Documents** | Documents uploaded in last 24 hours | Info |
+| **Upcoming Events** | Events scheduled within next 48 hours | Warning (<6h) / Info (>6h) |
+
+**Frontend Component:** Notification bell (🔔) in topbar with:
+- Live polling every 30 seconds
+- Unread count badge
+- Dropdown with dismiss and navigate actions
+- Severity-based color coding
+
 ---
 
 ## 8. Database Design
@@ -1084,6 +1184,16 @@ Designed for field deployment where internet connectivity is intermittent:
 │ ActionRequest │─────────│ Conversation │
 │               │session_id│              │
 └───────────────┘         └──────────────┘
+
+┌──────────┐     N:1     ┌──────────┐
+│  Event   │─────────────│  User    │
+│          │  created_by  │          │
+└──────────┘             └──────────┘
+
+┌──────────┐     N:1     ┌──────────┐
+│  Draft   │─────────────│  User    │
+│          │  created_by  │          │
+└──────────┘             └──────────┘
 ```
 
 ### Index Strategy
@@ -1096,6 +1206,8 @@ Designed for field deployment where internet connectivity is intermittent:
 | `documents` | `uploaded_by`, `created_at` | User docs, chronological sort |
 | `conversations` | `(session_id, created_at)` composite | History retrieval |
 | `embeddings` | `(source_type, source_id)`, `content_hash` | RAG queries, dedup |
+| `events` | `start_time`, `status`, `event_type`, `department` | Calendar queries, filtering |
+| `drafts` | `draft_type`, `status`, `department` | Draft listing, filtering |
 
 ### Seed Data
 
@@ -1107,6 +1219,10 @@ Designed for field deployment where internet connectivity is intermittent:
 **`seed_extras.py`** adds:
 - Date spread: Issues distributed across 30 days (not all same timestamp)
 - 16 action requests: 8 PENDING, 5 APPROVED, 3 REJECTED
+
+**`seed_schedule_drafts.py`** adds:
+- 22 calendar events across 7 event types (meetings, hearings, site visits, deadlines, reviews, public events)
+- 9 AI-generated drafts covering all 9 template types (Speech, Official Response, Press Release, Policy Brief, Meeting Agenda, Public Notice, Formal Letter, RTI Response, Government Circular)
 
 ---
 
@@ -1171,6 +1287,41 @@ Designed for field deployment where internet connectivity is intermittent:
 | `/api/v1/actions/{id}` | GET | Any | — | `ActionRequestResponse` |
 | `/api/v1/actions/{id}/review` | POST | Leader, Staff | `{status: "APPROVED"/"REJECTED", review_note?}` | `ActionRequestResponse` |
 
+### Speech-to-Text
+
+| Endpoint | Method | Auth | Body | Response |
+|----------|--------|------|------|----------|
+| `/api/v1/stt/transcribe` | POST | Any | `multipart/form-data {file}` | `{transcript, language, duration, provider}` |
+| `/api/v1/stt/classify` | POST | Any | `multipart/form-data {file}` | `{transcript, language, duration, classification}` |
+| `/api/v1/stt/ingest` | POST | Leader, Staff | `multipart/form-data {file, mode?}` | `{transcript, classification, created_entity, rag_indexed}` |
+
+### Schedule Management
+
+| Endpoint | Method | Auth | Query Params | Response |
+|----------|--------|------|------|----------|
+| `/api/v1/schedule` | GET | Any | `skip`, `limit`, `status`, `event_type`, `department`, `start_after`, `start_before` | `{total, events[]}` |
+| `/api/v1/schedule` | POST | Leader, Staff | — | `EventResponse` |
+| `/api/v1/schedule/{id}` | GET | Any | — | `EventResponse` |
+| `/api/v1/schedule/{id}` | PATCH | Any | — | `EventResponse` |
+| `/api/v1/schedule/{id}` | DELETE | Leader | — | `MessageResponse` |
+| `/api/v1/schedule/upcoming/list` | GET | Any | `hours` | `{total, events[]}` |
+
+### AI Draft Generator
+
+| Endpoint | Method | Auth | Body | Response |
+|----------|--------|------|------|----------|
+| `/api/v1/drafts/generate` | POST | Leader, Staff | `{draft_type, topic, tone?, audience?, department?, additional_context?}` | `DraftResponse` |
+| `/api/v1/drafts` | GET | Any | `skip`, `limit`, `draft_type`, `status`, `department` | `{total, drafts[]}` |
+| `/api/v1/drafts/{id}` | GET | Any | — | `DraftResponse` |
+| `/api/v1/drafts/{id}` | PATCH | Any | `{title?, content?, status?, tone?, audience?}` | `DraftResponse` |
+| `/api/v1/drafts/{id}` | DELETE | Leader | — | `MessageResponse` |
+
+### Notifications
+
+| Endpoint | Method | Auth | Response |
+|----------|--------|------|----------|
+| `/api/v1/notifications` | GET | Any | `{notifications[], count}` |
+
 ### Platform Operations
 
 | Endpoint | Method | Auth | Description |
@@ -1204,6 +1355,7 @@ npm run dev
 # Seed Data
 python seed_database.py
 python seed_extras.py
+python seed_schedule_drafts.py
 ```
 
 ### Docker Deployment
@@ -1376,6 +1528,10 @@ scikit-learn==1.4.0
 # Document Processing
 PyPDF2==3.0.1
 python-docx==1.1.0
+
+# Speech-to-Text
+faster-whisper              # Local offline STT (CPU/int8)
+openai                      # OpenAI Whisper API fallback
 
 # Monitoring
 structlog==24.1.0

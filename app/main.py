@@ -81,6 +81,9 @@ def create_app() -> FastAPI:
         "/api/v1/documents",
         "/api/v1/dashboard",
         "/api/v1/actions",
+        "/api/v1/schedule",
+        "/api/v1/drafts",
+        "/api/v1/notifications",
     ])
 
     class TrailingSlashMiddleware:
@@ -146,6 +149,10 @@ def create_app() -> FastAPI:
     from app.api.v1.compliance import router as compliance_router
     from app.api.v1.monitoring import router as monitoring_router
     from app.api.v1.hardening import router as hardening_router
+    from app.api.v1.stt import router as stt_router
+    from app.api.v1.notifications import router as notifications_router
+    from app.api.v1.schedule import router as schedule_router
+    from app.api.v1.drafts import router as drafts_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
     app.include_router(citizens_router, prefix="/api/v1/citizens", tags=["Citizens"])
@@ -159,6 +166,10 @@ def create_app() -> FastAPI:
     app.include_router(compliance_router, prefix="/api/v1/compliance", tags=["Compliance"])
     app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monitoring"])
     app.include_router(hardening_router, prefix="/api/v1/hardening", tags=["Hardening"])
+    app.include_router(stt_router, prefix="/api/v1/stt", tags=["Speech-to-Text"])
+    app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
+    app.include_router(schedule_router, prefix="/api/v1/schedule", tags=["Schedule"])
+    app.include_router(drafts_router, prefix="/api/v1/drafts", tags=["Drafts"])
 
     return app
 

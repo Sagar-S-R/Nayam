@@ -9,6 +9,8 @@
   <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" />
   <img src="https://img.shields.io/badge/LLM-Groq%20Llama%203.3-orange" />
   <img src="https://img.shields.io/badge/RAG-TF--IDF-green" />
+  <img src="https://img.shields.io/badge/STT-Whisper-blueviolet" />
+  <img src="https://img.shields.io/badge/Routers-16-blue" />
   <img src="https://img.shields.io/badge/Tests-518%20passing-brightgreen" />
 </p>
 
@@ -16,13 +18,16 @@
 
 ## What is NAYAM?
 
-NAYAM is an **AI-powered governance platform** that helps municipal leaders, staff, and analysts manage citizens, grievances, policy documents, and administrative workflows through an intelligent multi-agent system.
+NAYAM is an **AI-powered governance platform** that helps municipal leaders, staff, and analysts manage citizens, grievances, policy documents, schedules, and administrative workflows through an intelligent multi-agent system with speech-to-text input, AI draft generation, and smart notifications.
 
 **Core capabilities:**
 
 - 🤖 **Multi-Agent Intelligence** — 3 specialized AI agents (Policy, Citizen, Operations) powered by Groq LLM with intent-based routing
 - 📄 **Document RAG Pipeline** — Upload PDF/DOCX/TXT → text extraction → chunking → TF-IDF retrieval → LLM-grounded answers
-- 🎤 **Speech-to-Text Ready** — Architecture designed for STT integration (Whisper/Deepgram) → transcript feeds directly into existing RAG pipeline
+- 🎤 **Speech-to-Text Pipeline** — Fully implemented multi-provider STT: Groq Whisper (primary) → local faster-whisper (offline fallback) → OpenAI (last resort). Transcribe, classify, and ingest voice into RAG
+- ✍️ **AI Draft Generator** — LLM-powered generation of 9 document types (Speeches, Official Responses, Press Releases, Policy Briefs, Meeting Agendas, Public Notices, Letters, RTI Responses, Circulars) with template system prompts, tone/audience control, and versioned editing
+- 📅 **Schedule Management** — Full calendar/event system for leaders: meetings, hearings, site visits, deadlines, reviews, public events with priority levels, status lifecycle, and department/ward assignment
+- 🔔 **Smart Notifications** — Aggregated notification feed pulling from pending approvals, high-priority issues, recent documents, and upcoming events (48-hour lookahead)
 - ✅ **Human-in-the-Loop Approvals** — Every AI-proposed action requires explicit human approval before execution
 - 📊 **Real-time Analytics** — Ward-level risk scoring, predictive insights, geo-spatial intelligence
 - 🔒 **Enterprise Security** — JWT auth, RBAC (Leader/Staff/Analyst), rate limiting, audit logging
@@ -35,14 +40,15 @@ NAYAM is an **AI-powered governance platform** that helps municipal leaders, sta
 ┌─────────────────────────────────────────────────────────────┐
 │                    FRONTEND (Next.js 16)                     │
 │  Dashboard │ Issues │ Citizens │ Documents │ Intelligence    │
-│  Geo-Analytics │ Predictive │ Approvals │ Compliance        │
+│  Schedule │ Drafts │ Approvals │ Geo-Analytics │ Predictive │
+│  Compliance │ Monitoring │ Settings │ Notifications 🔔      │
 └──────────────────────────┬──────────────────────────────────┘
                            │ REST API (JSON)
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    BACKEND (FastAPI)                          │
 │                                                              │
 │  ┌─────────┐  ┌──────────┐  ┌────────────┐  ┌───────────┐  │
-│  │ 12 API  │→ │ Services │→ │Repositories│→ │ SQLAlchemy│  │
+│  │ 16 API  │→ │ Services │→ │Repositories│→ │ SQLAlchemy│  │
 │  │ Routers │  │ (Logic)  │  │ (Data)     │  │   ORM     │  │
 │  └─────────┘  └──────────┘  └────────────┘  └─────┬─────┘  │
 │                                                     │        │
@@ -61,9 +67,14 @@ NAYAM is an **AI-powered governance platform** that helps municipal leaders, sta
 │  │  └──────────────────────────────────────────┘    │        │
 │  │                                                  │        │
 │  │  ┌──────────────────────────────────────────┐    │        │
-│  │  │    STT Pipeline (Architecture Ready)     │    │        │
-│  │  │  Audio → Whisper/Deepgram → Transcript   │    │        │
-│  │  │  Transcript → chunk_text() → RAG Store   │    │        │
+│  │  │    STT Pipeline (Fully Implemented)       │    │        │
+│  │  │  Audio → Groq Whisper / faster-whisper   │    │        │
+│  │  │  Transcript → Classify → Ingest → RAG    │    │        │
+│  │  └──────────────────────────────────────────┘    │        │
+│  │                                                  │        │
+│  │  ┌──────────────────────────────────────────┐    │        │
+│  │  │    AI Draft Generator                    │    │        │
+│  │  │  9 Templates → Groq LLM → Versioned Docs│    │        │
 │  │  └──────────────────────────────────────────┘    │        │
 │  └──────────────────────────────────────────────────┘        │
 │                                                              │
@@ -87,7 +98,7 @@ app/
 │   ├── policy.py     # PolicyAgent — governance, schemes, regulations
 │   ├── citizen.py    # CitizenAgent — complaints, ward analytics
 │   └── operations.py # OperationsAgent — resources, departments, KPIs
-├── api/v1/           # 12 REST API routers
+├── api/v1/           # 16 REST API routers
 │   ├── auth.py       # JWT register/login
 │   ├── citizens.py   # CRUD + search
 │   ├── issues.py     # CRUD + filters
@@ -95,18 +106,32 @@ app/
 │   ├── dashboard.py  # Aggregated analytics
 │   ├── agent.py      # Chat + session history
 │   ├── actions.py    # HITL approval workflow
+│   ├── stt.py        # Speech-to-text (transcribe, classify, ingest)
+│   ├── notifications.py # Aggregated notification feed
+│   ├── schedule.py   # Calendar / event CRUD
+│   ├── drafts.py     # AI draft generation + management
 │   ├── sync.py       # Offline data sync
 │   ├── offline.py    # Offline queue management
 │   ├── compliance.py # Audit exports
 │   ├── monitoring.py # Health probes + metrics
 │   └── hardening.py  # Rate limit admin
-├── models/           # 7+ SQLAlchemy ORM models (24 tables)
-├── schemas/          # 15+ Pydantic v2 request/response schemas
+├── models/           # 9 SQLAlchemy ORM models (24+ tables)
+│   ├── user.py       # User model with roles
+│   ├── citizen.py    # Citizen records
+│   ├── issue.py      # Grievance/issue tracking
+│   ├── document.py   # Uploaded documents
+│   ├── event.py      # Schedule/calendar events
+│   └── draft.py      # AI-generated drafts
+├── schemas/          # 20+ Pydantic v2 request/response schemas
 ├── repositories/     # Data access layer (query builders)
 ├── services/         # Business logic layer
 │   ├── agent.py      # Orchestrates: route → RAG → execute → persist → approve
 │   ├── memory.py     # Conversation storage + TF-IDF RAG search
-│   └── document.py   # Text extraction, chunking, Groq summarization
+│   ├── document.py   # Text extraction, chunking, Groq summarization
+│   ├── stt.py        # Multi-provider STT (Groq/local/OpenAI Whisper)
+│   ├── notification.py # Aggregation from 4 sources
+│   ├── schedule.py   # Event lifecycle management
+│   └── draft.py      # LLM-powered draft generation (9 templates)
 ├── core/             # Config, DB engine, JWT security, structured logging
 ├── compliance/       # Audit trail + GDPR export
 ├── monitoring/       # Prometheus metrics + request logging
@@ -129,7 +154,7 @@ app/
 | **LLM** | Groq SDK → Llama 3.3 70B Versatile | Agent intelligence |
 | **RAG** | scikit-learn TF-IDF + cosine similarity | Document retrieval |
 | **Doc Extraction** | PyPDF2, python-docx | PDF/DOCX text extraction |
-| **STT** | Whisper / Deepgram (architecture ready) | Speech-to-text transcription |
+| **STT** | Groq Whisper + faster-whisper (local) + OpenAI Whisper | Multi-provider speech-to-text with fallback chain |
 | **Auth** | python-jose (JWT) + passlib (bcrypt) | Authentication |
 | **Logging** | structlog + JSON output | Observability |
 | **Monitoring** | Prometheus client | Metrics |
@@ -177,28 +202,71 @@ User Query
   Groq LLM                ← Generates grounded response
 ```
 
-### Speech-to-Text Integration (Architecture Ready)
+### Speech-to-Text Pipeline (Fully Implemented)
 
 ```
-User speaks into microphone
+User speaks into microphone (🎤 button on Intelligence / Documents pages)
        │
        ▼
-  Audio capture (.wav / .mp3 / stream)
+  Audio capture (MediaRecorder API → .webm/.wav)
        │
        ▼
-  STT Engine (Whisper API / Deepgram / Groq Whisper)
+  POST /api/v1/stt/transcribe   ← or /classify or /ingest
        │
        ▼
-  Text transcript
+  STT Provider Chain:
+    1. Groq Whisper (primary, fastest)
+    2. Local faster-whisper small (offline fallback, CPU/int8)
+    3. OpenAI Whisper API (last resort)
        │
        ▼
-  chunk_text() → store_embedding()  ← Same RAG pipeline as documents
+  Text transcript + language detection + duration
        │
-       ▼
-  Searchable via TF-IDF retrieval
+       ├──▶ /transcribe: Returns text only
+       ├──▶ /classify:   Transcribe → LLM classifies content type
+       └──▶ /ingest:     Transcribe → Classify → Create entity → RAG index
 ```
 
-The STT pipeline is architecturally designed to slot into the existing RAG system — once audio is transcribed to text, it enters the identical `chunk_text()` → `store_embedding()` → `search_by_text()` path that uploaded documents use.
+**Supported formats:** .wav, .mp3, .m4a, .ogg, .webm, .flac, .aac (max 25 MB)
+
+The STT pipeline fully integrates with the existing RAG system — transcribed voice content enters `chunk_text()` → `store_embedding()` → `search_by_text()` making spoken content searchable alongside uploaded documents.
+
+### AI Draft Generator
+
+```
+User selects template type (9 types available)
+       │
+       ▼
+  POST /api/v1/drafts/generate
+       │
+       ▼
+  Template system prompt selected (tone + audience placeholders)
+       │
+       ▼
+  Groq LLM (llama-3.3-70b, temperature=0.7, max_tokens=2000)
+       │
+       ▼
+  Draft created with content, word count, version=1
+       │
+       ▼
+  Edit → version auto-incremented → Submit for Review → Approve → Publish
+```
+
+**9 Draft Types:** Speech, Official Response, Press Release, Policy Brief, Meeting Agenda, Public Notice, Formal Letter, RTI Response, Government Circular
+
+### Schedule Management
+
+```
+Leader creates event with type/priority/attendees/department
+       │
+       ▼
+  Lifecycle: Scheduled → In Progress → Completed (or Cancelled)
+       │
+       ▼
+  Smart notifications: Events within 48 hours surface in notification feed
+```
+
+**7 Event Types:** Meeting, Hearing, Site Visit, Deadline, Review, Public Event, Other
 
 ---
 
@@ -244,6 +312,37 @@ The STT pipeline is architecturally designed to slot into the existing RAG syste
 | `GET` | `/api/v1/actions/pending` | Pending approvals |
 | `POST` | `/api/v1/actions/{id}/review` | Approve / reject action |
 
+### Speech-to-Text
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/stt/transcribe` | Audio → text transcription |
+| `POST` | `/api/v1/stt/classify` | Audio → text → content classification |
+| `POST` | `/api/v1/stt/ingest` | Audio → text → classify → create entity → RAG index |
+
+### Schedule Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/schedule/` | List events (filters: status, type, department, date range) |
+| `POST` | `/api/v1/schedule/` | Create event (Leader/Staff) |
+| `GET` | `/api/v1/schedule/{id}` | Get event by ID |
+| `PATCH` | `/api/v1/schedule/{id}` | Update event |
+| `DELETE` | `/api/v1/schedule/{id}` | Delete event |
+| `GET` | `/api/v1/schedule/upcoming/list` | Upcoming events |
+
+### AI Draft Generator
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/drafts/generate` | Generate draft with AI (Leader/Staff) |
+| `GET` | `/api/v1/drafts/` | List drafts (filters: type, status, department) |
+| `GET` | `/api/v1/drafts/{id}` | Get draft by ID |
+| `PATCH` | `/api/v1/drafts/{id}` | Update draft (auto-increments version) |
+| `DELETE` | `/api/v1/drafts/{id}` | Delete draft |
+
+### Notifications
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/notifications/` | Aggregated notification feed (4 sources) |
+
 ### Platform
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -279,6 +378,7 @@ uvicorn app.main:app --reload --port 8000
 # Seed data (server must be running)
 python seed_database.py         # 60 citizens, 130 issues, 5 docs
 python seed_extras.py           # Date spread + 16 action requests
+python seed_schedule_drafts.py  # 22 events + 9 AI drafts
 ```
 
 ### Frontend

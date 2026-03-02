@@ -29,6 +29,10 @@ from app.compliance.models import ComplianceExport
 from app.monitoring.models import PerformanceMetric
 from app.hardening.models import RateLimitRecord
 
+# Phase 5 models — PS gap closure
+from app.models.event import Event
+from app.models.draft import Draft
+
 __all__ = [
     # Phase 1
     "User",
@@ -54,4 +58,7 @@ __all__ = [
     "ComplianceExport",
     "PerformanceMetric",
     "RateLimitRecord",
+    # Phase 5
+    "Event",
+    "Draft",
 ]
