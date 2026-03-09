@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     OPENAI_API_KEY: str = ""
-    EMBEDDING_MODEL: str = "tfidf-local"
-    EMBEDDING_DIMENSIONS: int = 1
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSIONS: int = 384
     AGENT_TIMEOUT_SECONDS: int = 30
     AGENT_MAX_CONTEXT_MESSAGES: int = 20
     ACTION_EXPIRY_HOURS: int = 24

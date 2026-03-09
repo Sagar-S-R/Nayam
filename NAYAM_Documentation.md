@@ -2,7 +2,7 @@
 
 > **AI Co-Pilot Platform for Public Leaders & Municipal Administrators**
 >
-> Version 2.0.0 | Python 3.13 | FastAPI 0.104 | Next.js 16 | Groq LLM | TF-IDF RAG | Whisper STT | Bhashini Dhruva API
+> Version 2.0.0 | Python 3.13 | FastAPI 0.104 | Next.js 16 | Groq LLM | FAISS + Sentence-Transformers RAG | Whisper STT | Bhashini Dhruva API
 
 ---
 
@@ -61,7 +61,7 @@
 
 1. **AI-Augmented, Not AI-Autonomous** — Every AI-proposed action requires explicit human approval (Human-in-the-Loop). The system advises; humans decide.
 2. **Multi-Agent Specialization** — Three domain-specific agents (Policy, Citizen, Operations) each trained with contextual prompts and routed via intent classification.
-3. **Document-Grounded Intelligence** — All LLM responses are grounded in uploaded governance documents via RAG, reducing hallucination and improving factual accuracy.
+3. **Document-Grounded Intelligence** — All LLM responses are grounded in uploaded governance documents via RAG (FAISS + sentence-transformers dense embeddings), reducing hallucination and improving factual accuracy.
 4. **Voice-First Accessibility** — Fully implemented STT pipeline (Groq Whisper -> local faster-whisper -> OpenAI) and Bhashini Dhruva API integration for 12+ Indian languages enables voice input for queries, document creation, and issue filing in any supported Indian language.
 5. **AI Content Generation** — LLM-powered draft generator produces 9 types of government documents (speeches, responses, circulars, etc.) with template prompts, tone/audience control, and versioned editing.
 6. **Enterprise-Grade Security** — JWT authentication, role-based access control (RBAC), per-IP rate limiting, structured audit logging, and encrypted PII fields.
@@ -77,7 +77,7 @@
 | **HITL Approvals** | Review, approve, or reject every AI-proposed action before execution |
 | **Speech-to-Text** | Multi-provider STT pipeline: transcribe, classify content type, and intelligently ingest voice into the platform |
 | **Bhashini Language Services** | Full Bhashini Dhruva API integration: ASR, TTS, neural machine translation, hybrid LLM + keyword text classification, and summarization for 12+ Indian languages |
-| **Voice Intelligence** | Record voice in any Indian language, auto-classify as question/issue/document via hybrid classifier, and route to the appropriate action |
+| **Voice Intelligence** | Record voice in any Indian language, auto-classify as question/issue/document via hybrid classifier, user can override classification, and route to the appropriate action |
 | **Multi-Language Issue Creation** | File grievances via voice in any Indian language with Bhashini ASR and optional auto-translation to English |
 | **AI Draft Generator** | LLM-powered generation of 9 document types with template system prompts, tone/audience controls, versioned editing, and publish workflow |
 | **Schedule Management** | Full calendar/event system with 7 event types, 3 priority levels, status lifecycle, department/ward assignment, and 48-hour smart notifications |
@@ -144,7 +144,8 @@
 │  │                                                           │   │
 │  │  ┌─── RAG Pipeline ────────────────────────────────┐     │   │
 │  │  │ Upload → extract_text → chunk_text → store      │     │   │
-│  │  │ Query → TfidfVectorizer → cosine_sim → top-K    │     │   │
+│  │  │ Query → FAISS IndexFlatIP → dense cosine sim    │     │   │
+│  │  │ Model: all-MiniLM-L6-v2 (384-dim embeddings)    │     │   │
 │  │  └─────────────────────────────────────────────────┘     │   │
 │  │                                                           │   │
 │  │  ┌─── STT Pipeline (Fully Implemented) ────────────┐     │   │
@@ -499,7 +500,7 @@ Services implement business logic on top of repositories:
 | `DocumentService` | `app/services/document.py` | Upload, extraction, summarization, RAG indexing |
 | `DashboardService` | `app/services/dashboard.py` | Aggregated analytics computation |
 | `AgentService` | `app/services/agent.py` | Full query orchestration pipeline |
-| `MemoryService` | `app/services/memory.py` | Conversation storage + TF-IDF search |
+| `MemoryService` | `app/services/memory.py` | Conversation storage + FAISS dense vector RAG search |
 | `ApprovalService` | `app/services/approval.py` | Action request lifecycle |
 | `STTService` | `app/services/stt.py` | Multi-provider speech-to-text (Groq → local → OpenAI) |
 | `NotificationService` | `app/services/notification.py` | Aggregates 4 notification sources |
@@ -651,10 +652,13 @@ Document Upload (API: POST /api/v1/documents/upload)
        │
        ▼
   For each chunk:
+    generate_embeddings_batch()  ← sentence-transformers (all-MiniLM-L6-v2)
+       │
+       ▼
     memory.store_embedding()
        │
        ▼
-  Embedding record created  ← source_type="document", SHA-256 dedup
+  Embedding record created  ← source_type="document", SHA-256 dedup, 384-dim dense vectors
 ```
 
 #### Retrieval Flow
@@ -672,19 +676,16 @@ User Query (API: POST /api/v1/agent/query)
   Load ALL embeddings from DB (optionally filtered by source_type)
        │
        ▼
-  Build corpus: [chunk_1, chunk_2, ..., chunk_N, query]
+  generate_embedding(query)  ← sentence-transformers (all-MiniLM-L6-v2)
        │
        ▼
-  TfidfVectorizer(stop_words="english", max_features=5000)
+  Build FAISS IndexFlatIP(384)  ← Inner-product on L2-normalized vectors
        │
        ▼
-  fit_transform(corpus)    ← Build TF-IDF matrix
+  index.search(query_vector, top_k)
        │
        ▼
-  cosine_similarity(query_vector, document_vectors)
-       │
-       ▼
-  Sort by score descending, take top-5 where score > 0.02
+  Filter results by score > 0.15 threshold
        │
        ▼
   Return: [{embedding_id, source_type, source_id, chunk_text, score}, ...]
@@ -696,12 +697,12 @@ User Query (API: POST /api/v1/agent/query)
   Agent + LLM generate grounded response
 ```
 
-**Why TF-IDF over Vector Embeddings?**
-- Zero external dependency (no embedding API needed)
-- Works offline (scikit-learn is local)
-- Effective for domain-specific governance terminology
-- Fast for the expected corpus size (hundreds to low thousands of chunks)
-- Can be upgraded to dense embeddings later without changing the interface
+**Why FAISS + Sentence-Transformers?**
+- **Semantic understanding** — Dense embeddings capture meaning, not just keyword overlap
+- **Fast similarity search** — FAISS IndexFlatIP provides efficient nearest-neighbor search
+- **Better recall** — Handles paraphrasing, synonyms, and multilingual queries
+- **Compact model** — all-MiniLM-L6-v2 runs locally (CPU) with 384-dim vectors
+- **Batch encoding** — Efficient batch processing for document ingestion
 
 ### 4.5 Document Processing
 
@@ -770,8 +771,10 @@ The `MemoryService` manages two types of memory:
   - Computes `content_hash = SHA-256(text)`
   - Checks `exists_by_content_hash()` before insert
   - Prevents duplicate chunks from re-uploads
-- `search_similar_context()` — Vector-based similarity search (placeholder for dense embeddings)
-- `search_by_text()` — **Primary RAG retrieval method** using TF-IDF (see §4.4)
+- `generate_embedding(text)` — Generates a 384-dim dense vector using sentence-transformers (`all-MiniLM-L6-v2`), lazy-loaded on first call
+- `generate_embeddings_batch(texts)` — Batch encoding with `batch_size=64` and `normalize_embeddings=True` for efficient document ingestion
+- `search_similar_context()` — Vector-based similarity search (placeholder for future extensions)
+- `search_by_text()` — **Primary RAG retrieval method** using FAISS `IndexFlatIP` with dense embeddings (see §4.4)
 
 ### 4.7 Agent Orchestration
 
@@ -974,6 +977,11 @@ The `classify_text()` method implements a **hybrid classification** approach:
 - If LLM confidence < 65%, the keyword result overrides when it scores higher
 - On LLM failure, keyword classifier provides immediate fallback
 - Question-mark presence in text receives a scoring boost
+- Disambiguation examples in the LLM prompt distinguish policy discussion (document) from complaints (issue):
+  - "water supply policy needs revision" → document (policy discussion)
+  - "water supply nahi aa raha" → issue (complaint about service outage)
+  - "road repair report for this week" → document (report/record)
+  - "road has a pothole near my house" → issue (specific problem report)
 
 #### API Endpoints
 
@@ -1014,8 +1022,8 @@ Bhashini language services are integrated across three frontend pages:
 | Page | Integration |
 |------|-------------|
 | **Bhashini** (`/bhashini`) | Voice Intelligence tab (record, ASR, classify, act), Text-to-Speech tab, Translation tab |
-| **Documents** (`/documents`) | Language selector + Bhashini ASR for voice ingest with classification |
-| **Issues** (`/issues`) | Create Issue form with voice recording, Bhashini ASR, and translate-to-English |
+| **Documents** (`/documents`) | Language selector + Bhashini ASR for voice ingest with classification; user can override AI classification via "Create As" dropdown; TTS and Translate buttons on document detail modal |
+| **Issues** (`/issues`) | Create Issue form with voice recording, Bhashini ASR, and translate-to-English; TTS and Translate buttons on issue detail modal |
 
 ---
 
@@ -1090,7 +1098,7 @@ PENDING ──▶ APPROVED ──▶ (Action Executed)
 | **Dashboard** | `/` | Total issues, citizens, documents; department breakdown; status distribution; recent documents |
 | **Citizens** | `/citizens` | Paginated citizen list with ward filter; create/edit dialogs |
 | **Issues** | `/issues` | Issue list with status/priority/department filters; create with citizen selector; status updates |
-| **Documents** | `/documents` | Document list with file upload dialog; shows extracted text + AI summary; supports PDF/DOCX/TXT; Bhashini ASR voice ingest with 12-language selector |
+| **Documents** | `/documents` | Document list with file upload dialog; shows extracted text + AI summary; supports PDF/DOCX/TXT; Bhashini ASR voice ingest with 12-language selector; user-overridable AI classification ("Create As" dropdown); TTS and Translate on detail modal |
 | **Intelligence** | `/intelligence` | AI chat interface; session management; agent selector; real-time streaming responses; voice input |
 | **Schedule** | `/schedule` | Calendar event management; stats cards (upcoming/today/high priority); filters (type/status/department); event CRUD with detail dialog; status workflow (Start/Complete/Cancel) |
 | **Drafts** | `/drafts` | AI draft generation; 9 template quick-generate cards; stats (total/AI-generated/under review); generate dialog with tone/audience/context; view/edit with version tracking; copy to clipboard; publish workflow |
@@ -1099,7 +1107,7 @@ PENDING ──▶ APPROVED ──▶ (Action Executed)
 | **Predictive** | `/predictive` | 4-week forecast chart; anomaly detection (high-priority issues); ward trend lines |
 | **Compliance** | `/compliance` | Audit trail viewer; export functionality |
 | **Monitoring** | `/monitoring` | System health; API metrics; uptime status |
-| **Issues** | `/issues` | Issue list with status/priority/department filters; create with citizen selector; voice-based issue creation with Bhashini ASR and translate-to-English |
+| **Issues** | `/issues` | Issue list with status/priority/department filters; create with citizen selector; voice-based issue creation with Bhashini ASR and translate-to-English; TTS and Translate on detail modal |
 | **Bhashini** | `/bhashini` | Voice Intelligence (record, classify, route to action); Text-to-Speech with voice selection; Neural machine translation between language pairs |
 | **Settings** | `/settings` | User profile management; theme preferences |
 
@@ -1570,8 +1578,8 @@ pytest -n auto
 | `GROQ_API_KEY` | str | `""` | 2 | Groq LLM API key |
 | `GROQ_MODEL` | str | `"llama-3.3-70b-versatile"` | 2 | LLM model |
 | `OPENAI_API_KEY` | str | `""` | 2 | OpenAI API key (unused) |
-| `EMBEDDING_MODEL` | str | `"tfidf-local"` | 2 | Embedding provider |
-| `EMBEDDING_DIMENSIONS` | int | `1` | 2 | Vector dimensions |
+| `EMBEDDING_MODEL` | str | `"all-MiniLM-L6-v2"` | 2 | Embedding model (sentence-transformers) |
+| `EMBEDDING_DIMENSIONS` | int | `384` | 2 | Vector dimensions |
 | `AGENT_TIMEOUT_SECONDS` | int | `30` | 2 | Agent execution timeout |
 | `AGENT_MAX_CONTEXT_MESSAGES` | int | `20` | 2 | Max history per session |
 | `ACTION_EXPIRY_HOURS` | int | `24` | 2 | Action auto-expiry |
@@ -1628,7 +1636,8 @@ bcrypt==4.0.1
 
 # AI / LLM
 groq==0.25.0
-scikit-learn==1.4.0
+faiss-cpu==1.13.2
+sentence-transformers==5.2.3
 
 # Document Processing
 PyPDF2==3.0.1

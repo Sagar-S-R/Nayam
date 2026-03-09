@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi" />
   <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" />
   <img src="https://img.shields.io/badge/LLM-Groq%20Llama%203.3-orange" />
-  <img src="https://img.shields.io/badge/RAG-TF--IDF-green" />
+  <img src="https://img.shields.io/badge/RAG-FAISS%20%2B%20Sentence--Transformers-green" />
   <img src="https://img.shields.io/badge/STT-Whisper%20%2B%20Bhashini-blueviolet" />
   <img src="https://img.shields.io/badge/Bhashini-Dhruva%20API-ff6600" />
   <img src="https://img.shields.io/badge/API%20Routers-17-blue" />
@@ -27,10 +27,10 @@ NAYAM is an AI-powered governance platform designed to serve as an intelligent c
 | Capability | Description |
 |---|---|
 | **Multi-Agent Intelligence** | Three domain-specific AI agents (Policy, Citizen, Operations) powered by Groq LLM with keyword-scored intent routing |
-| **Document RAG Pipeline** | Upload PDF/DOCX/TXT; automatic text extraction, chunking, TF-IDF indexing, and LLM-grounded retrieval |
+| **Document RAG Pipeline** | Upload PDF/DOCX/TXT; automatic text extraction, chunking, FAISS dense-vector indexing (all-MiniLM-L6-v2, 384-dim), and LLM-grounded retrieval |
 | **Speech-to-Text Pipeline** | Multi-provider STT with automatic fallback: Groq Whisper, local faster-whisper (offline), OpenAI Whisper. Supports transcription, content classification, and intelligent entity ingestion |
 | **Bhashini Language Services** | Full integration with Bhashini Dhruva API for 12+ Indian languages: ASR (speech-to-text), TTS (text-to-speech), neural machine translation, LLM-powered text classification (question/issue/document), and text summarization with keyword-based fallback |
-| **Voice Intelligence** | Record voice in any supported Indian language, auto-classify as question/issue/document via hybrid LLM + keyword classifier, and route to the appropriate action |
+| **Voice Intelligence** | Record voice in any supported Indian language, auto-classify as question/issue/document via hybrid LLM + keyword classifier (with user-overridable classification), and route to the appropriate action |
 | **AI Draft Generator** | LLM-powered generation of nine formal document types with template system prompts, tone and audience controls, and versioned editing with publish workflow |
 | **Schedule Management** | Calendar and event system supporting seven event types, three priority levels, status lifecycle tracking, and department/ward assignment |
 | **Notification System** | Aggregated feed from four real-time sources: pending approvals, high-priority issues, recent documents, and upcoming events (48-hour lookahead) |
@@ -64,7 +64,7 @@ NAYAM is an AI-powered governance platform designed to serve as an intelligent c
 |  |         AI / INTELLIGENCE LAYER                  |        |
 |  |                                                  |        |
 |  |  Agent Router -> 3 Agents -> Groq LLM           |        |
-|  |  RAG Pipeline: TF-IDF Vectorize -> Cosine Sim   |        |
+|  |  RAG Pipeline: FAISS IndexFlatIP -> Dense Sim   |        |
 |  |  STT Pipeline: Groq / faster-whisper / OpenAI    |        |
 |  |  Bhashini Dhruva: ASR / TTS / NMT / Classify    |        |
 |  |  Draft Generator: 9 Templates -> LLM -> Docs    |        |
@@ -122,7 +122,7 @@ app/
 |-- repositories/        # Data access layer (query builders)
 |-- services/            # Business logic layer
 |   |-- agent.py         # Orchestration: route, RAG, execute, persist, approve
-|   |-- memory.py        # Conversation storage and TF-IDF RAG search
+|   |-- memory.py        # Conversation storage and FAISS dense-vector RAG search
 |   |-- document.py      # Text extraction, chunking, Groq summarization
 |   |-- stt.py           # Multi-provider STT (Groq, local, OpenAI)
 |   |-- bhashini.py      # Bhashini Dhruva service (ASR, TTS, NMT, classify, summarize)
@@ -149,7 +149,7 @@ app/
 | ORM | SQLAlchemy 2.0, Alembic | Database and migrations |
 | Database | SQLite (development) / PostgreSQL 16 (production) | Persistence |
 | LLM | Groq SDK, Llama 3.3 70B Versatile | Agent intelligence and draft generation |
-| RAG | scikit-learn TF-IDF, cosine similarity | Document retrieval |
+| RAG | FAISS (faiss-cpu), sentence-transformers (all-MiniLM-L6-v2) | Dense-vector document retrieval |
 | Document Extraction | PyPDF2, python-docx | PDF and DOCX text extraction |
 | Speech-to-Text | Groq Whisper, faster-whisper (local), OpenAI Whisper | Multi-provider STT with fallback chain |
 | Bhashini | Dhruva API (bhashini.gov.in) | Indian language ASR, TTS, neural machine translation |
@@ -176,6 +176,9 @@ File Upload (.pdf/.docx/.txt)
        +---> generate_summary()  -> Groq LLM -> 2-3 sentence summary
        |
        v
+  generate_embeddings_batch()  <-- sentence-transformers (all-MiniLM-L6-v2, 384-dim)
+       |
+       v
   store_embedding()       <-- Each chunk stored with SHA-256 deduplication
 ```
 
@@ -185,16 +188,16 @@ File Upload (.pdf/.docx/.txt)
 User Query
        |
        v
-  search_by_text()        <-- Load stored chunks from database
+  search_by_text()        <-- Load stored embeddings from database
        |
        v
-  TfidfVectorizer         <-- Build vocabulary on-the-fly
+  generate_embedding()    <-- Encode query via sentence-transformers
        |
        v
-  cosine_similarity()     <-- Rank chunks by relevance
+  FAISS IndexFlatIP(384)  <-- Inner-product on L2-normalized vectors
        |
        v
-  Top-5 chunks (score > 0.02) injected into agent prompt
+  Top-5 chunks (score > 0.15) injected into agent prompt
        |
        v
   Groq LLM generates grounded response
@@ -381,9 +384,9 @@ Full calendar and event system with seven event types (Meeting, Hearing, Site Vi
 | Page | Route | Description |
 |------|-------|-------------|
 | Dashboard | `/dashboard` | Real-time KPIs, departmental analytics, charts |
-| Issues | `/issues` | Issue tracking with filters, detail modal, voice-based issue creation with Bhashini ASR and auto-translate |
+| Issues | `/issues` | Issue tracking with filters, detail modal with TTS/Translate, voice-based issue creation with Bhashini ASR and auto-translate |
 | Citizens | `/citizens` | Citizen registry with search, add, and edit |
-| Documents | `/documents` | Document upload, voice ingest with Bhashini ASR (12 languages), AI classification, and RAG indexing |
+| **Documents** | `/documents` | Document upload, voice ingest with Bhashini ASR (12 languages), AI classification with user-overridable "Create As" dropdown, TTS/Translate on detail modal, and RAG indexing |
 | Intelligence | `/intelligence` | AI agent chat with document-grounded responses |
 | Bhashini | `/bhashini` | Voice Intelligence (record, classify, act), Text-to-Speech, Translation |
 | Approvals | `/approvals` | Human-in-the-loop review for AI-proposed actions |
