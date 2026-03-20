@@ -22,6 +22,9 @@ from app.repositories.action_request import ActionRequestRepository
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+from app.compliance.audit_writer import write_audit
+from app.observability.models import AuditAction
+
 
 class ApprovalService:
     """
@@ -33,6 +36,7 @@ class ApprovalService:
 
     def __init__(self, db: Session) -> None:
         self.repo = ActionRequestRepository(db)
+        self.db = db
 
     # ── Create ───────────────────────────────────────────────────
 
@@ -172,6 +176,18 @@ class ApprovalService:
             )
 
         reviewed = self.repo.review(action, new_status, reviewer.id, review_note)
+        audit_action = AuditAction.APPROVE if new_status == ActionStatus.APPROVED else AuditAction.REJECT
+        write_audit(
+            self.db,
+            action=audit_action,
+            resource_type="action_request",
+            resource_id=str(action_id),
+            description=(
+                f"Action '{action.action_type}' {new_status.value} by {reviewer.email} ({reviewer.role.value})"
+                + (f": {review_note}" if review_note else "")
+            ),
+            user_id=reviewer.id,
+        )
         logger.info(
             "Action %s reviewed → %s by user %s",
             action_id, new_status.value, reviewer.id,

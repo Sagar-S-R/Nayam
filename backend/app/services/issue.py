@@ -19,6 +19,10 @@ from app.schemas.issue import IssueCreateRequest, IssueUpdateRequest
 
 logger = logging.getLogger(__name__)
 
+from app.compliance.audit_writer import write_audit
+from app.observability.models import AuditAction
+
+
 
 class IssueService:
     """
@@ -70,7 +74,15 @@ class IssueService:
             priority=payload.priority,
             sla_deadline=sla,
         )
-        return self.repo.create(issue)
+        created = self.repo.create(issue)
+        write_audit(
+            self.repo.db,
+            action=AuditAction.CREATE,
+            resource_type="issue",
+            resource_id=str(created.id),
+            description=f"Issue created: {payload.department} | Priority: {payload.priority.value}",
+        )
+        return created
 
     def get_issue(self, issue_id: UUID) -> Issue:
         """
@@ -151,7 +163,16 @@ class IssueService:
         for field, value in update_data.items():
             setattr(issue, field, value)
 
-        return self.repo.update(issue)
+        updated = self.repo.update(issue)
+        if "status" in update_data:
+            write_audit(
+                self.repo.db,
+                action=AuditAction.UPDATE,
+                resource_type="issue",
+                resource_id=str(issue_id),
+                description=f"Issue status changed \u2192 {update_data.get('status')}",
+            )
+        return updated
 
     def delete_issue(self, issue_id: UUID) -> None:
         """

@@ -18,6 +18,9 @@ from app.schemas.citizen import CitizenCreateRequest, CitizenUpdateRequest
 
 logger = logging.getLogger(__name__)
 
+from app.compliance.audit_writer import write_audit
+from app.observability.models import AuditAction
+
 
 class CitizenService:
     """
@@ -29,6 +32,7 @@ class CitizenService:
 
     def __init__(self, db: Session) -> None:
         self.repo = CitizenRepository(db)
+        self.db = db
 
     def create_citizen(self, payload: CitizenCreateRequest) -> Citizen:
         """
@@ -45,7 +49,15 @@ class CitizenService:
             contact_number=payload.contact_number,
             ward=payload.ward,
         )
-        return self.repo.create(citizen)
+        created = self.repo.create(citizen)
+        write_audit(
+            self.db,
+            action=AuditAction.CREATE,
+            resource_type="citizen",
+            resource_id=str(created.id),
+            description=f"Citizen registered: {created.name} | Ward: {created.ward}",
+        )
+        return created
 
     def get_citizen(self, citizen_id: UUID) -> Citizen:
         """

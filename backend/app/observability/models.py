@@ -10,9 +10,8 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, DateTime, Enum, Index, String, Text, Uuid,
+    Column, DateTime, Enum, Index, String, Text, Uuid, JSON
 )
-from sqlalchemy.dialects.postgresql import JSON
 
 from app.core.database import Base
 

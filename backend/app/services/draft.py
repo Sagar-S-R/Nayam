@@ -23,6 +23,9 @@ from app.schemas.draft import (
 
 logger = logging.getLogger(__name__)
 
+from app.compliance.audit_writer import write_audit
+from app.observability.models import AuditAction
+
 # ── Template System Prompts ──────────────────────────────────────────
 
 DRAFT_SYSTEM_PROMPTS: dict[str, str] = {
@@ -87,6 +90,7 @@ class DraftService:
     def __init__(self, db: Session) -> None:
         self.repo = DraftRepository(db)
         self._settings = get_settings()
+        self._db = db
 
     # ── LLM Generation ───────────────────────────────────────────
 
@@ -193,7 +197,17 @@ class DraftService:
             extra_metadata={"word_count": word_count, "ai_generated": True},
             created_by=user_id,
         )
-        return self.repo.create(draft)
+        created = self.repo.create(draft)
+        write_audit(
+            self._db,
+            action=AuditAction.CREATE,
+            resource_type="draft",
+            resource_id=str(created.id),
+            description=f"AI draft generated: '{title}' ({payload.draft_type.value})",
+            user_id=user_id,
+            metadata={"ai_generated": True, "word_count": word_count},
+        )
+        return created
 
     def list_drafts(
         self,
@@ -237,7 +251,16 @@ class DraftService:
         for field, value in updates.items():
             setattr(draft, field, value)
 
-        return self.repo.update(draft)
+        updated = self.repo.update(draft)
+        if updates.get("status") == "published":
+            write_audit(
+                self._db,
+                action=AuditAction.UPDATE,
+                resource_type="draft",
+                resource_id=str(draft_id),
+                description=f"Draft published: '{draft.title}' (v{draft.version})",
+            )
+        return updated
 
     def delete_draft(self, draft_id: UUID) -> None:
         draft = self.get_draft(draft_id)

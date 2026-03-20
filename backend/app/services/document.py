@@ -21,6 +21,9 @@ from app.repositories.document import DocumentRepository
 
 logger = logging.getLogger(__name__)
 
+from app.compliance.audit_writer import write_audit
+from app.observability.models import AuditAction
+
 settings = get_settings()
 
 # ── Allowed File Extensions (security) ───────────────────────────────
@@ -241,6 +244,14 @@ class DocumentService:
         except Exception as e:
             logger.warning("Failed to store embeddings for document %s: %s", created_doc.id, e)
 
+        write_audit(
+            self._db,
+            action=AuditAction.CREATE,
+            resource_type="document",
+            resource_id=str(created_doc.id),
+            description=f"Document uploaded: '{title}'",
+            user_id=uploaded_by,
+        )
         return created_doc
 
     def _store_document_embeddings(self, document: Document) -> None:

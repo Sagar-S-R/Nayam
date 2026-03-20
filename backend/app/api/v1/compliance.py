@@ -159,3 +159,55 @@ def export_audit_trail_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@router.get(
+    "/audit-trail",
+    summary="Live audit trail",
+)
+def list_audit_trail(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    Return a paginated list of audit log entries for the Compliance page.
+
+    Every state-changing operation (issue create/update, citizen create,
+    document upload, action approve/reject, draft publish) writes a row here.
+    """
+    from app.observability.models import AuditLog
+    from app.models.user import User as UserModel
+    from sqlalchemy import desc
+
+    query = db.query(AuditLog).order_by(desc(AuditLog.created_at))
+    total = query.count()
+    entries = query.offset(skip).limit(limit).all()
+
+    # Enrich with actor name/role from users table
+    result = []
+    for e in entries:
+        actor_name = "System"
+        actor_role = "system"
+        if e.user_id:
+            user = db.query(UserModel).filter(UserModel.id == e.user_id).first()
+            if user:
+                actor_name = user.name or user.email
+                actor_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+
+        result.append({
+            "id": str(e.id),
+            "timestamp": e.created_at.isoformat(),
+            "actor_name": actor_name,
+            "actor_role": actor_role,
+            "action": e.action.value if hasattr(e.action, "value") else str(e.action),
+            "resource_type": e.resource_type,
+            "resource_id": e.resource_id,
+            "description": e.description or "",
+            "is_ai": bool(e.metadata_json.get("ai_generated") if e.metadata_json else False),
+            "metadata": e.metadata_json or {},
+        })
+
+    return {"total": total, "entries": result}
+
