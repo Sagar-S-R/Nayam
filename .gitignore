@@ -39,7 +39,7 @@ coverage.xml
 # Uploads (keep directory, ignore contents)
 uploads/*
 !uploads/.gitkeep
-
+*.txt
 # OS
 .DS_Store
 Thumbs.db
