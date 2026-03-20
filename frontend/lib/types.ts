@@ -25,6 +25,7 @@ export interface CitizenBackend {
   id: string
   name: string
   contact_number: string
+  masked_contact: string
   ward: string
   created_at: string
 }
@@ -39,6 +40,7 @@ export interface Citizen {
   id: string
   name: string
   contact: string
+  maskedContact: string
   ward: string
   activeIssues: number
   riskLevel: "low" | "medium" | "high" | "critical"
@@ -127,11 +129,20 @@ export interface AgentInfo {
   description: string
 }
 
+export interface SourceCitation {
+  document_id: string
+  document_title: string
+  chunk_index: number
+  chunk_preview: string
+  relevance_score: number
+}
+
 export interface AgentQueryResponse {
   session_id: string
   agent_name: string
   response: string
   confidence: number
+  sources: SourceCitation[]
   suggested_actions: Record<string, unknown>[]
   pending_actions: { id: string; action_type: string; description: string; status: string }[]
   metadata: Record<string, unknown>

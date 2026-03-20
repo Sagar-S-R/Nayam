@@ -75,6 +75,7 @@ function mapCitizen(c: CitizenBackend, issueCount: number = 0): Citizen {
     id: c.id,
     name: c.name,
     contact: c.contact_number,
+    maskedContact: c.masked_contact || c.contact_number,
     ward: c.ward,
     activeIssues: issueCount,
     riskLevel: issueCount >= 4 ? "critical" : issueCount >= 2 ? "high" : issueCount >= 1 ? "medium" : "low",

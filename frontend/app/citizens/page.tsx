@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -20,6 +20,7 @@ import {
 import { StatusBadge } from "@/components/nayam/status-badge"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchCitizens, createCitizen } from "@/lib/services"
+import { toast } from "sonner"
 import type { Citizen } from "@/lib/types"
 
 export default function CitizensPage() {
@@ -28,15 +29,46 @@ export default function CitizensPage() {
   const [riskFilter, setRiskFilter] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedCitizen, setSelectedCitizen] = useState<string | null>(null)
+  
+  // Form state
   const [newName, setNewName] = useState("")
   const [newContact, setNewContact] = useState("")
   const [newWard, setNewWard] = useState("")
-  const [addError, setAddError] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  //  Validation messages
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  
+  // Ward list
+  const [wardList, setWardList] = useState<string[]>([])
+  const [loadingWards, setLoadingWards] = useState(true)
 
   const { data, isLoading, refetch } = useApiData(() => fetchCitizens({ limit: 200 }), [])
   const allCitizens: Citizen[] = data?.citizens || []
 
-  const wards = useMemo(() => [...new Set(allCitizens.map((c) => c.ward))], [allCitizens])
+  // Fetch ward list on mount
+  useEffect(() => {
+    const fetchWards = async () => {
+      try {
+        const token = localStorage.getItem("auth_token")
+        const response = await fetch("/api/v1/citizens/wards", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setWardList(data.wards || [])
+        }
+      } catch (err) {
+        console.error("Failed to fetch wards:", err)
+        setWardList([]) // Fallback to empty
+      } finally {
+        setLoadingWards(false)
+      }
+    }
+    fetchWards()
+  }, [])
+
+  const dynamicWards = useMemo(() => [...new Set(allCitizens.map((c) => c.ward))], [allCitizens])
 
   const filtered = allCitizens.filter((c) => {
     const matchSearch =
@@ -51,21 +83,66 @@ export default function CitizensPage() {
     ? allCitizens.find((c) => c.id === selectedCitizen)
     : null
 
+  // Validate form inputs
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+    
+    if (!newName.trim()) {
+      errors.name = "Name is required"
+    } else if (newName.trim().length < 2) {
+      errors.name = "Name must be at least 2 characters"
+    } else if (!/[a-zA-Z]/.test(newName)) {
+      errors.name = "Name must contain letters"
+    }
+    
+    if (!newContact.trim()) {
+      errors.contact = "Phone number is required"
+    } else if (!/^\d{10}$|^\+91\d{10}$|^91\d{10}$|^0\d{10}$/.test(newContact.replace(/[\s\-]/g, ""))) {
+      errors.contact = "Invalid phone format. Use Indian format: +91XXXXXXXXXX or XXXXXXXXXX"
+    }
+    
+    if (!newWard.trim()) {
+      errors.ward = "Ward is required"
+    }
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleAddCitizen = async () => {
-    if (!newName.trim() || !newContact.trim() || !newWard.trim()) {
-      setAddError("All fields are required")
+    if (!validateForm()) {
       return
     }
+    
+    setIsSubmitting(true)
     try {
-      setAddError("")
-      await createCitizen({ name: newName, contact_number: newContact, ward: newWard })
+      const newCitizen = await createCitizen({
+        name: newName.trim(),
+        contact_number: newContact.trim(),
+        ward: newWard.trim(),
+      })
+      
+      // Show success toast
+      toast.success("Citizen added successfully!", {
+        description: `${newName} has been added to Ward ${newWard}`,
+      })
+      
+      // Reset form
       setShowAddModal(false)
       setNewName("")
       setNewContact("")
       setNewWard("")
-      refetch()
-    } catch {
-      setAddError("Failed to add citizen")
+      setValidationErrors({})
+      
+      // Refetch to show new citizen
+      await refetch()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to add citizen"
+      toast.error("Error adding citizen", {
+        description: errorMessage,
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -89,7 +166,10 @@ export default function CitizensPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setShowAddModal(true)
+            setValidationErrors({})
+          }}
           className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
         >
           <Plus className="h-4 w-4" />
@@ -117,7 +197,7 @@ export default function CitizensPage() {
             className="border-2 border-foreground bg-card px-3 py-2 text-xs font-bold uppercase text-foreground"
           >
             <option value="">All Wards</option>
-            {wards.map((w) => (
+            {dynamicWards.map((w) => (
               <option key={w} value={w}>
                 {w}
               </option>
@@ -159,7 +239,7 @@ export default function CitizensPage() {
                     <p className="text-[10px] font-mono text-muted-foreground">{c.id}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm font-mono text-foreground">{c.contact}</TableCell>
+                <TableCell className="text-sm font-mono text-foreground">{c.maskedContact || c.contact}</TableCell>
                 <TableCell>
                   <span className="text-sm font-semibold text-foreground">{c.ward}</span>
                 </TableCell>
@@ -222,7 +302,7 @@ export default function CitizensPage() {
                 </div>
                 <div className="border-2 border-foreground p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</p>
-                  <p className="mt-1 text-sm font-mono text-foreground">{citizen.contact}</p>
+                  <p className="mt-1 text-sm font-mono text-foreground">{citizen.maskedContact || citizen.contact}</p>
                 </div>
                 <div className="border-2 border-foreground p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ward</p>
@@ -272,9 +352,6 @@ export default function CitizensPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {addError && (
-              <p className="text-xs font-bold text-red-600 border-2 border-red-300 bg-red-50 p-2">{addError}</p>
-            )}
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Full Name
@@ -283,47 +360,87 @@ export default function CitizensPage() {
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="mt-1 w-full border-2 border-foreground bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
+                  validationErrors.name
+                    ? "border-red-500 bg-red-50 text-foreground"
+                    : "border-foreground bg-background text-foreground"
+                }`}
                 placeholder="Enter full name"
               />
+              {validationErrors.name && (
+                <p className="mt-1 text-xs text-red-600">{validationErrors.name}</p>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Contact Number
               </label>
-              <input
-                type="text"
-                value={newContact}
-                onChange={(e) => setNewContact(e.target.value)}
-                className="mt-1 w-full border-2 border-foreground bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="+91 XXXXX XXXXX"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={newContact}
+                  onChange={(e) => setNewContact(e.target.value)}
+                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
+                    validationErrors.contact
+                      ? "border-red-500 bg-red-50 text-foreground"
+                      : "border-foreground bg-background text-foreground"
+                  }`}
+                  placeholder="+91 XXXXX XXXXX or XXXXXXXXXX"
+                />
+                {!validationErrors.contact && newContact && /^\d{10}$|^\+91\d{10}$|^91\d{10}$|^0\d{10}$/.test(newContact.replace(/[\s\-]/g, "")) && (
+                  <CheckCircle className="absolute right-3 top-3 h-5 w-5 text-green-600" />
+                )}
+              </div>
+              {validationErrors.contact && (
+                <p className="mt-1 text-xs text-red-600">{validationErrors.contact}</p>
+              )}
             </div>
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Ward
               </label>
-              <input
-                type="text"
-                value={newWard}
-                onChange={(e) => setNewWard(e.target.value)}
-                className="mt-1 w-full border-2 border-foreground bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g. Ward 1"
-              />
+              <div className="relative">
+                <select
+                  value={newWard}
+                  onChange={(e) => setNewWard(e.target.value)}
+                  disabled={loadingWards}
+                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
+                    validationErrors.ward
+                      ? "border-red-500 bg-red-50 text-foreground"
+                      : "border-foreground bg-background text-foreground"
+                  }`}
+                >
+                  <option value="">— Select Ward —</option>
+                  {wardList.map((ward) => (
+                    <option key={ward} value={ward}>
+                      {ward}
+                    </option>
+                  ))}
+                </select>
+                {loadingWards && (
+                  <Loader2 className="absolute right-3 top-3 h-5 w-5 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              {validationErrors.ward && (
+                <p className="mt-1 text-xs text-red-600">{validationErrors.ward}</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <button
               onClick={() => setShowAddModal(false)}
-              className="border-2 border-foreground bg-background px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-muted"
+              disabled={isSubmitting}
+              className="border-2 border-foreground bg-background px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleAddCitizen}
-              className="border-2 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
+              disabled={isSubmitting}
+              className="border-2 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2"
             >
-              Add Citizen
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSubmitting ? "Adding..." : "Add Citizen"}
             </button>
           </DialogFooter>
         </DialogContent>

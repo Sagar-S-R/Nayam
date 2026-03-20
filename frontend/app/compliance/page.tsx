@@ -19,12 +19,59 @@ import type { AuditLog } from "@/lib/types"
 export default function CompliancePage() {
   const [userFilter, setUserFilter] = useState("")
   const [typeFilter, setTypeFilter] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
+  const [includeHindi, setIncludeHindi] = useState(true)
 
   // Fetch compliance exports as audit trail
   const { data: exportData, isLoading } = useApiData(
     () => fetchComplianceExports({ limit: 100 }),
     []
   )
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    setIsExporting(true)
+    try {
+      const token = localStorage.getItem("auth_token")
+      const endpoint = `/api/v1/compliance/audit-trail/pdf?include_hindi=${includeHindi}`
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`)
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get("content-disposition")
+      let filename = "NAYAM_AuditTrail.pdf"
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename=(.+)/)
+        if (matches) {
+          filename = matches[1].replace(/"/g, "")
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("PDF export error:", error)
+      alert(`Failed to export PDF: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // Transform compliance exports into audit-like logs
   const auditLogs: AuditLog[] = useMemo(() => {
@@ -67,10 +114,34 @@ export default function CompliancePage() {
             Immutable audit trails and compliance monitoring
           </p>
         </div>
-        <button className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5">
-          <Download className="h-4 w-4" />
-          Export Logs
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Language Selector */}
+          <div className="flex items-center gap-2 border-2 border-foreground bg-card px-3 py-2 md:min-w-max">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Language:</span>
+            <select
+              value={includeHindi ? "bilingual" : "english"}
+              onChange={(e) => setIncludeHindi(e.target.value === "bilingual")}
+              className="bg-card text-xs font-bold uppercase text-foreground focus:outline-none"
+            >
+              <option value="bilingual">English + Hindi</option>
+              <option value="english">English Only</option>
+            </select>
+          </div>
+          
+          {/* Export Button */}
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:opacity-50"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {isExporting ? "Exporting..." : "Export Logs"}
+          </button>
+        </div>
       </div>
 
       {/* Security Summary */}

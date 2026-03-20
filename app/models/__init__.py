@@ -2,11 +2,16 @@
 NAYAM (नयम्) — ORM Models Package.
 """
 
+# Base
+from app.core.database import Base
+
 # Phase 1 models
 from app.models.user import User
 from app.models.citizen import Citizen
 from app.models.issue import Issue
 from app.models.document import Document
+from app.models.draft import Draft
+from app.models.event import Event
 
 # Phase 2 models
 from app.models.conversation import Conversation
@@ -34,6 +39,8 @@ from app.models.event import Event
 from app.models.draft import Draft
 
 __all__ = [
+    # Base
+    "Base",
     # Phase 1
     "User",
     "Citizen",

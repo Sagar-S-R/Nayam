@@ -4,17 +4,23 @@ NAYAM (नयम्) — Compliance API Routes (Phase 4).
 Endpoints for compliance export lifecycle: request, track, list.
 """
 
+import io
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
+from sqlalchemy import desc
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
 from app.compliance.models import ExportStatus
+from app.compliance.audit_trail_pdf import generate_audit_trail_pdf
 from app.models.user import User, UserRole
+from app.models.action_request import ActionRequest
 from app.schemas.compliance import (
     ComplianceExportRequest,
     ComplianceExportResponse,
@@ -103,3 +109,53 @@ def get_export(
     """Retrieve a single compliance export by ID."""
     svc = ComplianceService(db)
     return ComplianceExportResponse.model_validate(svc.get_export(export_id))
+
+
+@router.get(
+    "/audit-trail/pdf",
+    summary="Export audit trail as PDF",
+)
+def export_audit_trail_pdf(
+    include_hindi: bool = Query(True, description="Include Hindi translations in PDF"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.LEADER, UserRole.ANALYST])),
+) -> StreamingResponse:
+    """
+    Generate and download a PDF report of the last 50 audit trail entries.
+    
+    Query Parameters:
+        include_hindi: Include Hindi translations (default: true)
+    
+    The PDF includes:
+    - NAYAM header with branding
+    - Generation timestamp and user info
+    - Table of audit entries with: timestamp, actor, action, type (AI/Human), status
+    - Page numbers and pagination
+    - Optional Hindi subtitle (नयम् - शासन प्रबंधन प्रणाली)
+    """
+    # Fetch last 50 action requests, ordered by creation date (newest first)
+    audit_entries = (
+        db.query(ActionRequest)
+        .options(joinedload(ActionRequest.requester))
+        .order_by(desc(ActionRequest.created_at))
+        .limit(50)
+        .all()
+    )
+
+    # Generate PDF with optional hindi support
+    pdf_bytes = generate_audit_trail_pdf(
+        audit_entries=audit_entries,
+        user=current_user,
+        generated_at=datetime.now(timezone.utc),
+        include_hindi=include_hindi,
+    )
+
+    # Return as downloadable file
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"NAYAM_AuditTrail_{timestamp}.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

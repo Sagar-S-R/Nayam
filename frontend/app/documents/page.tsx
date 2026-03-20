@@ -18,6 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/nayam/status-badge"
+import { EmptyState } from "@/components/nayam/empty-state"
+import { LoadingState } from "@/components/nayam/loading-state"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchDocuments, uploadDocument, bhashiniASR, bhashiniClassifyText, createIssue, fetchCitizens, bhashiniTTS, bhashiniTranslate } from "@/lib/services"
 import type { Document, Citizen } from "@/lib/types"
@@ -254,7 +256,7 @@ export default function DocumentsPage() {
   if (isLoading) {
     return (
       <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <LoadingState message="NAYAM is loading documents..." fullScreen={false} />
       </main>
     )
   }
@@ -323,6 +325,20 @@ export default function DocumentsPage() {
           </button>
         </div>
       </div>
+
+      {/* Voice Processing Loading State */}
+      {isProcessingVoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <LoadingState message="NAYAM is transcribing and analyzing your voice..." fullScreen={false} />
+        </div>
+      )}
+
+      {/* File Upload Loading State */}
+      {uploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <LoadingState message="NAYAM is indexing your document for RAG retrieval..." fullScreen={false} />
+        </div>
+      )}
 
       {/* Upload Form */}
       {showUpload && (
@@ -534,67 +550,72 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="border-3 border-foreground bg-card shadow-[4px_4px_0px_0px] shadow-foreground/20">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b-2 border-foreground bg-muted/50">
-              <TableHead className="text-xs font-black uppercase tracking-widest">Title</TableHead>
-              <TableHead className="text-xs font-black uppercase tracking-widest">Uploaded By</TableHead>
-              <TableHead className="text-xs font-black uppercase tracking-widest">Date</TableHead>
-              <TableHead className="text-xs font-black uppercase tracking-widest">AI Summary</TableHead>
-              <TableHead className="text-xs font-black uppercase tracking-widest">Risk</TableHead>
-              <TableHead className="text-xs font-black uppercase tracking-widest">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {allDocuments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm font-bold">No documents yet</p>
-                  <p className="text-xs mt-1">Upload policy documents, reports, or guidelines to enable RAG-powered AI analysis</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              allDocuments.map((d) => (
-                <TableRow key={d.id} className="border-b border-foreground/10">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{d.title}</p>
-                        <p className="text-[10px] font-mono text-muted-foreground">{d.id.slice(0, 8)}...</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-foreground">{d.uploadedBy}</TableCell>
-                  <TableCell className="text-sm font-mono text-muted-foreground">{d.date}</TableCell>
-                  <TableCell>
-                    <p className="max-w-xs truncate text-xs text-muted-foreground">{d.aiSummary}</p>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={d.riskRelevance} variant="risk" />
-                  </TableCell>
-                  <TableCell>
-                    <button
-                      onClick={() => setSelectedDoc(d.id)}
-                      className="flex items-center gap-1.5 border-2 border-foreground bg-background px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-foreground hover:text-background"
-                    >
-                      <Eye className="h-3 w-3" />
-                      View
-                    </button>
-                  </TableCell>
+      {/* Empty State */}
+      {allDocuments.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No Documents Yet"
+          description="Upload a PDF or DOCX to begin RAG indexing."
+          action={{
+            label: "Upload Document",
+            onClick: () => setShowUpload(true),
+          }}
+        />
+      ) : (
+        <>
+          {/* Table */}
+          <div className="border-3 border-foreground bg-card shadow-[4px_4px_0px_0px] shadow-foreground/20">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b-2 border-foreground bg-muted/50">
+                  <TableHead className="text-xs font-black uppercase tracking-widest">Title</TableHead>
+                  <TableHead className="text-xs font-black uppercase tracking-widest">Uploaded By</TableHead>
+                  <TableHead className="text-xs font-black uppercase tracking-widest">Date</TableHead>
+                  <TableHead className="text-xs font-black uppercase tracking-widest">AI Summary</TableHead>
+                  <TableHead className="text-xs font-black uppercase tracking-widest">Risk</TableHead>
+                  <TableHead className="text-xs font-black uppercase tracking-widest">Actions</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {allDocuments.map((d) => (
+                  <TableRow key={d.id} className="border-b border-foreground/10">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-foreground">{d.title}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground">{d.id.slice(0, 8)}...</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-foreground">{d.uploadedBy}</TableCell>
+                    <TableCell className="text-sm font-mono text-muted-foreground">{d.date}</TableCell>
+                    <TableCell>
+                      <p className="max-w-xs truncate text-xs text-muted-foreground">{d.aiSummary}</p>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={d.riskRelevance} variant="risk" />
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => setSelectedDoc(d.id)}
+                        className="flex items-center gap-1.5 border-2 border-foreground bg-background px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-foreground hover:text-background"
+                      >
+                        <Eye className="h-3 w-3" />
+                        View
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
-      <p className="text-[10px] text-muted-foreground">
-        Showing {allDocuments.length} of {data?.total || 0} documents
-      </p>
+          <p className="text-[10px] text-muted-foreground">
+            Showing {allDocuments.length} of {data?.total || 0} documents
+          </p>
+        </>
+      )}
 
       {/* Document Detail Modal */}
       <Dialog open={!!selectedDoc} onOpenChange={() => { setSelectedDoc(null); setDocTtsAudio(null); setDocTransResult(null) }}>
