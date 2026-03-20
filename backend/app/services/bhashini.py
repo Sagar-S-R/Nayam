@@ -28,20 +28,9 @@ DHRUVA_INFERENCE_URL = settings.BHASHINI_INFERENCE_URL
 
 # Languages known to be supported by Bhashini for each task type.
 # Used by the /languages endpoint (Dhruva has no discovery API).
-_KNOWN_ASR_LANGUAGES = [
-    "hi", "en", "bn", "ta", "te", "mr", "gu", "kn", "ml",
-    "pa", "or", "as", "ur", "sa", "mai", "doi", "ks", "kok",
-    "mni", "ne", "sd", "sat", "brx",
-]
-_KNOWN_TTS_LANGUAGES = [
-    "hi", "en", "bn", "ta", "te", "mr", "gu", "kn", "ml",
-    "pa", "or", "as", "brx",
-]
-_KNOWN_TRANSLATION_LANGUAGES = [
-    "hi", "en", "bn", "ta", "te", "mr", "gu", "kn", "ml",
-    "pa", "or", "as", "ur", "sa", "mai", "doi", "ks", "kok",
-    "mni", "ne", "sd", "sat", "brx",
-]
+_KNOWN_ASR_LANGUAGES = ["en", "hi", "ur", "pa"]
+_KNOWN_TTS_LANGUAGES = ["en", "hi", "ur", "pa"]
+_KNOWN_TRANSLATION_LANGUAGES = ["en", "hi", "ur", "pa"]
 
 
 

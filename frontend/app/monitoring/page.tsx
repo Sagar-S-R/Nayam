@@ -14,11 +14,12 @@ import {
   Tooltip,
 } from "recharts"
 import { useApiData } from "@/hooks/use-api-data"
-import { fetchHealthDeep, fetchMetrics } from "@/lib/services"
+import { fetchHealthDeep, fetchMetrics, fetchBhashiniHealth } from "@/lib/services"
 import type { HealthProbeResponse, MetricBackend, MetricListResponse } from "@/lib/types"
 
 export default function MonitoringPage() {
   const { data: health, isLoading: loadingHealth } = useApiData<HealthProbeResponse>(() => fetchHealthDeep(), [])
+  const { data: bhashiniHealth } = useApiData<any>(() => fetchBhashiniHealth(), [])
   const { data: metricsData } = useApiData<MetricListResponse>(() => fetchMetrics({ limit: 100 }), [])
 
   const metrics = metricsData?.metrics || []
@@ -57,6 +58,8 @@ export default function MonitoringPage() {
 
   const dbStatus = health?.db_connected ? "connected" : "disconnected"
   const isHealthy = health?.status === "healthy"
+  const isBhashiniHealthy = bhashiniHealth?.available === true
+  const bhashiniTime = new Date().toLocaleTimeString()
 
   if (loadingHealth) {
     return (

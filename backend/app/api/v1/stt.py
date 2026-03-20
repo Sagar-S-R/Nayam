@@ -23,6 +23,7 @@ from app.schemas.stt import (
     TranscribeResponse,
     TranscribeAndClassifyResponse,
     TranscribeAndIngestResponse,
+    MeetingModeResponse,
 )
 from app.services.stt import STTService
 
@@ -120,3 +121,37 @@ async def transcribe_and_ingest(
         session_id=session_id,
     )
     return TranscribeAndIngestResponse(**result)
+
+
+@router.post(
+    "/meeting-mode",
+    response_model=MeetingModeResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Meeting Mode: Audio to MoM & Actions",
+)
+async def meeting_mode(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MeetingModeResponse:
+    from meeting_service import process_meeting_audio
+    
+    # Optional size limits are now handled by main.py middleware, but we can double check:
+    content = await file.read()
+    if len(content) > 25 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds 25MB limit",
+        )
+    # Reset cursor
+    await file.seek(0)
+    
+    try:
+        result = await process_meeting_audio(file, db, str(current_user.id))
+        return MeetingModeResponse(**result)
+    except Exception as e:
+        logger.error(f"Meeting mode failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Meeting Mode processing failed: {str(e)}"
+        )

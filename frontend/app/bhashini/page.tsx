@@ -60,12 +60,13 @@ const LANGUAGES: { code: string; label: string; native: string }[] = [
   { code: "brx", label: "Bodo", native: "बड़ो" },
 ]
 
-type TabType = "asr" | "tts" | "translate"
+type TabType = "asr" | "tts" | "translate" | "meeting"
 
 const TABS: { key: TabType; label: string; icon: React.ReactNode }[] = [
   { key: "asr", label: "Voice Intelligence", icon: <Mic className="h-4 w-4" /> },
   { key: "tts", label: "Text to Speech", icon: <Volume2 className="h-4 w-4" /> },
   { key: "translate", label: "Translate", icon: <ArrowRightLeft className="h-4 w-4" /> },
+  { key: "meeting", label: "Meeting Mode", icon: <Mic className="h-4 w-4" /> },
 ]
 
 // ═════════════════════════════════════════════════════════════════════
@@ -866,6 +867,134 @@ function LanguageSelect({
           </option>
         ))}
       </select>
+    </div>
+  )
+}
+
+
+// -------------------------------------------------------------------------
+// Meeting Mode Tab
+// -------------------------------------------------------------------------
+
+function MeetingModeTab() {
+  const [recording, setRecording] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+  const [error, setError] = useState("")
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+
+  const startRecording = useCallback(async () => {
+    try {
+      setError("")
+      setResult(null)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" })
+      chunksRef.current = []
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      mr.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+        if (blob.size === 0) return
+        setLoading(true)
+        try {
+          const formData = new FormData()
+          formData.append("file", blob, "meeting.webm")
+          const token = localStorage.getItem("nayam_token")
+          const response = await fetch(${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/stt/meeting-mode, {
+             method: 'POST',
+             headers: {
+                 'Authorization': Bearer 
+             },
+             body: formData
+          })
+          if (!response.ok) throw new Error("Meeting extraction failed")
+          const data = await response.json()
+          setResult(data)
+        } catch (err: any) {
+          setError(err.message || "Failed to process meeting.")
+        } finally {
+          setLoading(false)
+        }
+      }
+      mediaRecorderRef.current = mr
+      mr.start(1000)
+      setRecording(true)
+    } catch (err: any) {
+      setError("Could not access microphone: " + err.message)
+    }
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+      setRecording(false)
+      mediaRecorderRef.current.stream.getTracks().forEach((trk) => trk.stop())
+    }
+  }, [])
+
+  return (
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
+        
+        {/* Left: Input */}
+        <div className="border-3 border-foreground bg-card p-6 shadow-[8px_8px_0px_0px] shadow-foreground/20">
+          <div className="flex items-center gap-3 mb-6 border-b-2 border-foreground/20 pb-4">
+            <Mic className="h-6 w-6 text-primary" />
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-wider text-foreground">Meeting Mode</h2>
+              <p className="text-xs text-muted-foreground">Record long municipal meetings for AI minutes.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-8">
+            <button
+              onClick={recording ? stopRecording : startRecording}
+              disabled={loading}
+              className={
+elative flex h-24 w-24 items-center justify-center rounded-full border-4 transition-all  }
+            >
+              {recording ? <Square className="h-8 w-8" /> : loading ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8" />}
+            </button>
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {recording ? "Recording... (Click to Stop)" : loading ? "Processing Meeting..." : "Click to Record Meeting"}
+            </p>
+          </div>
+          {error && <p className="text-xs font-bold text-red-600 p-2 bg-red-100 border border-red-600 mt-4 text-center">{error}</p>}
+        </div>
+
+        {/* Right: Output */}
+        <div className="border-3 border-foreground bg-card p-6 shadow-[8px_8px_0px_0px] shadow-foreground/20">
+          <h2 className="text-lg font-black uppercase tracking-wider text-foreground mb-4">Minutes of Meeting</h2>
+          {result ? (
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              <div className="border-2 border-foreground bg-muted/20 p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2">Extraction Summary</h3>
+                <p className="text-sm text-foreground mb-2">{result.extraction.summary}</p>
+                
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2 mt-4">Key Decisions</h3>
+                <ul className="list-disc pl-5 text-sm text-foreground">
+                  {result.extraction.key_decisions.map((d:string, i:number) => <li key={i}>{d}</li>)}
+                </ul>
+                
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2 mt-4">Action Items ({result.created_action_requests} pending)</h3>
+                <ul className="list-disc pl-5 text-sm text-foreground">
+                  {result.extraction.action_items.map((a:any, i:number) => (
+                    <li key={i}><strong>{a.task}</strong> ({a.department} - {a.deadline})</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : (
+             <div className="flex h-40 items-center justify-center border-2 border-dashed border-foreground/20">
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No output yet</span>
+             </div>
+          )}
+        </div>
+
+      </div>
     </div>
   )
 }

@@ -609,18 +609,12 @@ export default function IssuesPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Speak in</label>
-                      <select value={detailTtsLang} onChange={(e) => setDetailTtsLang(e.target.value)} className="mt-0.5 block w-24 border border-foreground/50 bg-background px-2 py-1 text-xs">
-                        <option value="hi">Hindi</option>
-                        <option value="en">English</option>
-                        <option value="bn">Bengali</option>
-                        <option value="ta">Tamil</option>
-                        <option value="te">Telugu</option>
-                        <option value="mr">Marathi</option>
-                        <option value="gu">Gujarati</option>
-                        <option value="kn">Kannada</option>
-                        <option value="ml">Malayalam</option>
-                        <option value="pa">Punjabi</option>
-                      </select>
+                      <select value={detailTtsLang} onChange={(e) =>
+<option value="en">English</option>
+<option value="hi">Hindi</option>
+<option value="ur">Urdu</option>
+<option value="pa">Punjabi</option>
+</select>
                     </div>
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Voice</label>
@@ -639,19 +633,12 @@ export default function IssuesPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Translate to</label>
-                      <select value={detailTransLang} onChange={(e) => setDetailTransLang(e.target.value)} className="mt-0.5 block w-24 border border-foreground/50 bg-background px-2 py-1 text-xs">
-                        <option value="hi">Hindi</option>
-                        <option value="bn">Bengali</option>
-                        <option value="ta">Tamil</option>
-                        <option value="te">Telugu</option>
-                        <option value="mr">Marathi</option>
-                        <option value="gu">Gujarati</option>
-                        <option value="kn">Kannada</option>
-                        <option value="ml">Malayalam</option>
-                        <option value="pa">Punjabi</option>
-                        <option value="or">Odia</option>
-                        <option value="ur">Urdu</option>
-                      </select>
+                      <select value={detailTransLang} onChange={(e) =>
+<option value="en">English</option>
+<option value="hi">Hindi</option>
+<option value="ur">Urdu</option>
+<option value="pa">Punjabi</option>
+</select>
                     </div>
                     <button onClick={handleDetailTranslate} disabled={detailTransLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-blue-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-blue-700 disabled:opacity-50">
                       {detailTransLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />}

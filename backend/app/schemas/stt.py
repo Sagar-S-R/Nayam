@@ -72,3 +72,24 @@ class TranscribeAndIngestResponse(BaseModel):
     provider: str
     classification: ClassificationResult
     ingestion: IngestResult
+
+
+class ActionItemExtracted(BaseModel):
+    task: str = Field(..., description="Action item description")
+    department: Optional[str] = Field(None, description="Responsible department")
+    deadline: Optional[str] = Field(None, description="Suggested deadline")
+
+class MeetingExtractionResult(BaseModel):
+    summary: str = Field(..., description="Meeting summary")
+    key_decisions: List[str] = Field(default_factory=list, description="Key decisions made")
+    action_items: List[ActionItemExtracted] = Field(default_factory=list, description="Action items with responsible departments")
+    departments: List[str] = Field(default_factory=list, description="Departments mentioned")
+    priority_issues: List[str] = Field(default_factory=list, description="Priority issues raised")
+
+class MeetingModeResponse(BaseModel):
+    """Pipeline response for Meeting Mode: Audio -> transcript -> LLM Extraction -> db items"""
+    transcript: str
+    provider: str
+    extraction: MeetingExtractionResult
+    meeting_draft_id: Optional[str] = None
+    created_action_requests: int = 0
