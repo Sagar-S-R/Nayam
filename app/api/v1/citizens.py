@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
+from app.core.mcd_wards import get_valid_wards
 from app.models.user import User, UserRole
 from app.schemas.citizen import (
     CitizenCreateRequest,
@@ -27,6 +28,23 @@ from app.services.citizen import CitizenService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get(
+    "/wards",
+    response_model=dict,
+    summary="Get list of valid MCD wards",
+)
+def get_wards(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    Get list of valid MCD wards for dropdown selection.
+    
+    Returns:
+        Dict with 'wards' list.
+    """
+    return {"wards": get_valid_wards()}
 
 
 @router.post(

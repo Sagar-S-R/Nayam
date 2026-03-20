@@ -15,6 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class SourceCitation:
+    """
+    Citation of a source document used in RAG retrieval.
+
+    Attributes:
+        document_id: UUID of the source document.
+        document_title: Human-readable title of the source document.
+        chunk_index: Index of the chunk within the document (0-based).
+        chunk_preview: 30-40 word preview of the chunk text.
+        relevance_score: Cosine similarity score (0.0 – 1.0).
+    """
+
+    document_id: UUID
+    document_title: str
+    chunk_index: int
+    chunk_preview: str
+    relevance_score: float
+
+
+@dataclass
 class AgentContext:
     """
     Immutable context object passed into every agent execution.
@@ -25,6 +45,7 @@ class AgentContext:
         query: The user's current query text.
         conversation_history: Prior messages in this session.
         rag_context: Retrieved document chunks from RAG pipeline.
+        rag_sources: Source metadata for each RAG context (parallel list).
         metadata: Arbitrary extra data agents may need.
     """
 
@@ -33,6 +54,7 @@ class AgentContext:
     query: str
     conversation_history: List[Dict[str, str]] = field(default_factory=list)
     rag_context: List[str] = field(default_factory=list)
+    rag_sources: List['SourceCitation'] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -46,6 +68,7 @@ class AgentResponse:
         message: The natural-language response text.
         confidence: Agent's self-assessed confidence (0.0 – 1.0).
         suggested_actions: Actions the agent proposes (require HITL approval).
+        sources: Source citations from RAG retrieval used in response.
         metadata: Arbitrary extra data for downstream consumers.
     """
 
@@ -53,6 +76,7 @@ class AgentResponse:
     message: str
     confidence: float = 1.0
     suggested_actions: List[Dict[str, Any]] = field(default_factory=list)
+    sources: List[SourceCitation] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 

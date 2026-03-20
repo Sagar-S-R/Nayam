@@ -4,7 +4,9 @@ import { useState, useRef, useCallback } from "react"
 import { Send, Brain, User, Sparkles, CheckCircle, XCircle, Loader2, Mic, MicOff, AudioLines } from "lucide-react"
 import { useApiData } from "@/hooks/use-api-data"
 import { sendAgentQuery, fetchAgents, fetchPendingApprovals, reviewAction, transcribeAudio } from "@/lib/services"
-import type { AgentInfo, Approval } from "@/lib/types"
+import { SourceCitations } from "@/components/nayam/source-citations"
+import { LoadingState } from "@/components/nayam/loading-state"
+import type { AgentInfo, Approval, SourceCitation } from "@/lib/types"
 
 interface Message {
   id: number
@@ -12,6 +14,7 @@ interface Message {
   content: string
   confidence?: number
   actions?: string[]
+  sources?: SourceCitation[]
 }
 
 export default function IntelligencePage() {
@@ -120,6 +123,7 @@ export default function IntelligencePage() {
         role: "ai",
         content: response.response,
         confidence: Math.round(response.confidence * 100),
+        sources: response.sources,
         actions: response.suggested_actions?.map((a) => {
           if (typeof a === "string") return a
           return (a as Record<string, string>).description || (a as Record<string, string>).action || "Action"
@@ -212,6 +216,9 @@ export default function IntelligencePage() {
                     </div>
                   )}
                   <p className="text-sm text-foreground leading-relaxed">{msg.content}</p>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <SourceCitations sources={msg.sources} className="mt-3" />
+                  )}
                   {msg.actions && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {msg.actions.map((action) => (
@@ -232,6 +239,18 @@ export default function IntelligencePage() {
                 )}
               </div>
             ))}
+            {isSending && (
+              <div className="flex gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-foreground bg-primary">
+                  <Brain className="h-4 w-4 text-primary-foreground animate-pulse" />
+                </div>
+                <div className="border-2 border-foreground bg-card p-4 flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary animate-pulse">
+                    NAYAM is analyzing...
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input */}

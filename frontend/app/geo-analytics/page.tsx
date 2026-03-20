@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Loader2 } from "lucide-react"
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Loader2, MapPin } from "lucide-react"
 import { MapPlaceholder } from "@/components/nayam/map-placeholder"
 import { ChartCard } from "@/components/nayam/chart-card"
+import { EmptyState } from "@/components/nayam/empty-state"
+import { LoadingState } from "@/components/nayam/loading-state"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchIssues } from "@/lib/services"
 import type { Issue } from "@/lib/types"
@@ -43,7 +45,7 @@ export default function GeoAnalyticsPage() {
   if (isLoading) {
     return (
       <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <LoadingState message="NAYAM is analyzing ward-level risks..." fullScreen={false} />
       </main>
     )
   }
@@ -59,7 +61,18 @@ export default function GeoAnalyticsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {wardRiskData.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="No Ward Data Available"
+          description="Add issues with ward assignments to generate the risk heatmap."
+          action={{
+            label: "Create an Issue",
+            onClick: () => (window.location.href = "/issues"),
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Map Area */}
         <div className="lg:col-span-2 space-y-4">
           <MapPlaceholder
@@ -249,6 +262,7 @@ export default function GeoAnalyticsPage() {
           )}
         </div>
       </div>
+      )}
     </main>
   )
 }

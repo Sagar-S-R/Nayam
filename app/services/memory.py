@@ -282,9 +282,11 @@ class MemoryService:
             top_k: Number of results.
 
         Returns:
-            List of dicts with keys: embedding_id, source_type,
-            source_id, chunk_text, score.
+            List of dicts with keys: embedding_id, source_type, source_id,
+            chunk_text, chunk_index, document_title, chunk_preview, score.
         """
+        from app.models.document import Document
+        
         db_query = self.embedding_repo.db.query(Embedding)
         if source_type:
             db_query = db_query.filter(Embedding.source_type == source_type)
@@ -324,11 +326,30 @@ class MemoryService:
                 if idx < 0 or score < 0.15:  # relevance threshold
                     continue
                 emb = valid[idx][1]
+                
+                # Get document title if source_type is "document"
+                document_title = "Unknown Document"
+                if emb.source_type == "document":
+                    doc = self.embedding_repo.db.query(Document).filter(
+                        Document.id == emb.source_id
+                    ).first()
+                    if doc:
+                        document_title = doc.title
+                
+                # Create chunk preview (30-40 words)
+                words = emb.chunk_text.split()[:40]
+                chunk_preview = " ".join(words)
+                if len(emb.chunk_text.split()) > 40:
+                    chunk_preview += "..."
+                
                 results.append({
                     "embedding_id": emb.id,
                     "source_type": emb.source_type,
                     "source_id": emb.source_id,
                     "chunk_text": emb.chunk_text,
+                    "chunk_index": emb.chunk_index,
+                    "document_title": document_title,
+                    "chunk_preview": chunk_preview,
                     "score": score,
                 })
 

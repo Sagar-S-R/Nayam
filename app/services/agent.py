@@ -78,13 +78,26 @@ class AgentService:
         ]
 
         # 3. RAG context — FAISS + sentence-transformer semantic search
+        from app.agents.base import SourceCitation
+        
         rag_context: List[str] = []
+        rag_sources: List[SourceCitation] = []
         try:
             embedding_results = self._memory.search_by_text(
                 query=query,
                 top_k=5,
             )
             rag_context = [r["chunk_text"] for r in embedding_results]
+            rag_sources = [
+                SourceCitation(
+                    document_id=r["source_id"],
+                    document_title=r.get("document_title", "Unknown"),
+                    chunk_index=r.get("chunk_index", 0),
+                    chunk_preview=r.get("chunk_preview", r.get("chunk_text", "")[:200]),
+                    relevance_score=r.get("score", 0.0),
+                )
+                for r in embedding_results
+            ]
         except Exception:
             # RAG is best-effort; continue without it
             logger.warning("RAG retrieval failed, proceeding without context")
@@ -109,6 +122,7 @@ class AgentService:
             query=query,
             conversation_history=history,
             rag_context=rag_context,
+            rag_sources=rag_sources,
             metadata=metadata or {},
         )
 
@@ -153,6 +167,16 @@ class AgentService:
             "agent_name": response.agent_name,
             "response": response.message,
             "confidence": response.confidence,
+            "sources": [
+                {
+                    "document_id": src.document_id,
+                    "document_title": src.document_title,
+                    "chunk_index": src.chunk_index,
+                    "chunk_preview": src.chunk_preview,
+                    "relevance_score": src.relevance_score,
+                }
+                for src in response.sources
+            ],
             "suggested_actions": response.suggested_actions,
             "pending_actions": pending_actions,
             "metadata": response.metadata,

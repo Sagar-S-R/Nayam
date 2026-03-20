@@ -75,6 +75,7 @@ class PolicyAgent(BaseAgent):
             message=message,
             confidence=confidence,
             suggested_actions=suggested_actions,
+            sources=context.rag_sources,
         )
 
     def _system_prompt(self) -> str:

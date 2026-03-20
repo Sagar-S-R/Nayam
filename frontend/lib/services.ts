@@ -75,6 +75,7 @@ function mapCitizen(c: CitizenBackend, issueCount: number = 0): Citizen {
     id: c.id,
     name: c.name,
     contact: c.contact_number,
+    maskedContact: c.masked_contact || c.contact_number,
     ward: c.ward,
     activeIssues: issueCount,
     riskLevel: issueCount >= 4 ? "critical" : issueCount >= 2 ? "high" : issueCount >= 1 ? "medium" : "low",
@@ -110,6 +111,11 @@ export async function createCitizen(payload: {
   ward: string
 }): Promise<CitizenBackend> {
   return api.post<CitizenBackend>("/citizens", payload)
+}
+
+export async function fetchWards(): Promise<string[]> {
+  const response = await api.get<{ wards: string[] }>("/citizens/wards")
+  return response.wards
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -321,8 +327,12 @@ export async function reviewAction(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Compliance
+// Compliance & Audit
 // ═══════════════════════════════════════════════════════════════════════
+
+export async function fetchActions(params?: { skip?: number; limit?: number; status?: string }) {
+  return api.get<ActionRequestListResponse>("/actions", params as Record<string, string>)
+}
 
 export async function fetchComplianceExports(params?: { skip?: number; limit?: number }) {
   return api.get<{ total: number; exports: unknown[] }>("/compliance/exports", params as Record<string, string>)

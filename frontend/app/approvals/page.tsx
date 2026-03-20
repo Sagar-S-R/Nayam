@@ -10,6 +10,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { EmptyState } from "@/components/nayam/empty-state"
+import { LoadingState } from "@/components/nayam/loading-state"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchAllApprovals, reviewAction } from "@/lib/services"
 import type { Approval } from "@/lib/types"
@@ -38,11 +40,7 @@ export default function ApprovalsPage() {
   const processed = approvals.filter((a) => a.status !== "pending")
 
   if (isLoading) {
-    return (
-      <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </main>
-    )
+    return <LoadingState message="NAYAM is analyzing pending approvals..." fullScreen />
   }
 
   return (
@@ -125,11 +123,11 @@ export default function ApprovalsPage() {
             </div>
           ))}
           {pending.length === 0 && (
-            <div className="border-3 border-dashed border-foreground/30 bg-muted/50 p-8 text-center">
-              <CheckCircle className="mx-auto h-8 w-8 text-emerald-600" />
-              <p className="mt-2 text-sm font-bold text-foreground">All caught up</p>
-              <p className="text-xs text-muted-foreground">No pending approvals</p>
-            </div>
+            <EmptyState
+              icon={CheckCircle}
+              title="No Pending Approvals"
+              description="No pending approvals — the AI is ready for new queries."
+            />
           )}
         </div>
       </div>
