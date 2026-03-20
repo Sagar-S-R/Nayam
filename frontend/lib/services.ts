@@ -505,3 +505,15 @@ export async function bhashiniLanguages(): Promise<BhashiniLanguagesResponse> {
 export async function bhashiniHealth(): Promise<BhashiniHealthResponse> {
   return api.get<BhashiniHealthResponse>("/bhashini/health")
 }
+
+
+export async function meetingModeAudio(audioBlob: Blob): Promise<any> {
+  const formData = new FormData()
+  formData.append("file", audioBlob, "meeting_audio.wav")
+
+  return api.post<any>("/stt/meeting-mode", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  })
+}

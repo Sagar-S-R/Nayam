@@ -66,23 +66,42 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         settings = get_settings()
 
-        # Skip rate limiting if not configured (e.g. during tests)
         if settings.RATE_LIMIT_REQUESTS <= 0:
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = request.client.host if request.client else "unknown"        
         endpoint = request.url.path
-        max_requests = settings.RATE_LIMIT_REQUESTS
-        window = settings.RATE_LIMIT_WINDOW_SECONDS
 
-        if _is_rate_limited(client_ip, max_requests, window):
+        # Determine limits based on endpoint
+        if endpoint.startswith("/api/v1/agent"):
+            max_requests = 10  # Stricter for Agent
+            window = 60
+            
+            # Try to get user_id from token
+            user_id = client_ip
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+                try:
+                    import jwt
+                    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+                    user_id = payload.get("sub", client_ip)
+                except:
+                    pass
+            rate_key = f"agent:{user_id}"
+        else:
+            max_requests = settings.RATE_LIMIT_REQUESTS
+            window = settings.RATE_LIMIT_WINDOW_SECONDS
+            rate_key = client_ip
+
+        if _is_rate_limited(rate_key, max_requests, window):
             logger.warning(
-                "Rate limit exceeded: ip=%s endpoint=%s", client_ip, endpoint,
+                "Rate limit exceeded: key=%s endpoint=%s", rate_key, endpoint,  
             )
-            self._record_event(client_ip, endpoint, window, blocked=True)
+            self._record_event(client_ip, endpoint, window, blocked=True)       
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Rate limit exceeded. Try again later."},
+                content={"detail": "Rate limit exceeded. Try again later."},    
             )
 
         response = await call_next(request)

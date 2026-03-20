@@ -14,7 +14,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, token_blacklist
 from app.models.user import User, UserRole
 from app.repositories.user import UserRepository
 
@@ -45,6 +45,9 @@ def get_current_user(
         detail="Could not validate credentials.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if token in token_blacklist:
+        raise credentials_exception
 
     payload = decode_access_token(token)
     if payload is None:

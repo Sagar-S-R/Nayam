@@ -41,13 +41,22 @@ def agent_query(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> AgentQueryResponse:
-    """
-    Route the user's query to the appropriate agent, execute it,
-    persist the conversation turn, and return the structured response.
-
-    Requires: Any authenticated user.
-    """
     service = AgentService(db)
+    
+    # Bhashini Translation Wrapper
+    source_lang = payload.metadata.get("language", "en") if payload.metadata else "en"
+    
+    original_query = payload.query
+    if source_lang != "en":
+        try:
+            from app.services.bhashini import translate_text
+            # Translate to English for the LLM
+            logger.info(f"Translating query from {source_lang} to English")
+            trans_res = translate_text(payload.query, source_lang, "en")
+            payload.query = trans_res.get("translated_text", payload.query)
+        except Exception as e:
+            logger.error(f"Bhashini translation failed before agent: {e}")
+            
     result = service.process_query(
         user_id=current_user.id,
         query=payload.query,
@@ -55,6 +64,17 @@ def agent_query(
         agent_name=payload.agent_name,
         metadata=payload.metadata,
     )
+    
+    # Translate back if needed
+    if source_lang != "en" and result.get("response"):
+        try:
+            from app.services.bhashini import translate_text
+            logger.info(f"Translating response from English to {source_lang}")
+            trans_res = translate_text(result["response"], "en", source_lang)
+            result["response"] = trans_res.get("translated_text", result["response"])
+        except Exception as e:
+            logger.error(f"Bhashini translation failed after agent: {e}")
+
     return AgentQueryResponse(**result)
 
 
