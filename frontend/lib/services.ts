@@ -327,8 +327,12 @@ export async function reviewAction(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Compliance
+// Compliance & Audit
 // ═══════════════════════════════════════════════════════════════════════
+
+export async function fetchActions(params?: { skip?: number; limit?: number; status?: string }) {
+  return api.get<ActionRequestListResponse>("/actions", params as Record<string, string>)
+}
 
 export async function fetchComplianceExports(params?: { skip?: number; limit?: number }) {
   return api.get<{ total: number; exports: unknown[] }>("/compliance/exports", params as Record<string, string>)

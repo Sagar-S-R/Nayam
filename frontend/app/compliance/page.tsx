@@ -13,7 +13,7 @@ import {
 import { StatusBadge } from "@/components/nayam/status-badge"
 import { ChartCard } from "@/components/nayam/chart-card"
 import { useApiData } from "@/hooks/use-api-data"
-import { fetchComplianceExports } from "@/lib/services"
+import { fetchActions } from "@/lib/services"
 import { toast } from "sonner"
 import type { AuditLog } from "@/lib/types"
 
@@ -23,9 +23,9 @@ export default function CompliancePage() {
   const [isExporting, setIsExporting] = useState(false)
   const [includeHindi, setIncludeHindi] = useState(true)
 
-  // Fetch compliance exports as audit trail
-  const { data: exportData, isLoading } = useApiData(
-    () => fetchComplianceExports({ limit: 100 }),
+  // Fetch audit actions as audit trail
+  const { data: actionsData, isLoading } = useApiData(
+    () => fetchActions({ limit: 100 }),
     []
   )
 
@@ -33,7 +33,7 @@ export default function CompliancePage() {
   const handleExportPDF = async () => {
     setIsExporting(true)
     try {
-      const token = localStorage.getItem("auth_token")
+      const token = localStorage.getItem("nayam_token")
       
       // Check authentication
       if (!token) {
@@ -57,7 +57,8 @@ export default function CompliancePage() {
         toast.error("Session expired", {
           description: "Your login session has expired. Please log in again.",
         })
-        localStorage.removeItem("auth_token")
+        localStorage.removeItem("nayam_token")
+        localStorage.removeItem("nayam_user")
         return
       }
 
@@ -137,18 +138,18 @@ export default function CompliancePage() {
     }
   }
 
-  // Transform compliance exports into audit-like logs
+  // Transform action requests into audit logs
   const auditLogs: AuditLog[] = useMemo(() => {
-    if (!exportData?.exports) return []
-    return (exportData.exports as Record<string, unknown>[]).map((e, i) => ({
-      id: (e.id as string) || `AUD-${i + 1}`,
-      action: (e.report_type as string) || "Data Export",
-      user: (e.requested_by as string) || "System",
-      timestamp: ((e.requested_at as string) || "").replace("T", " ").slice(0, 16),
-      details: `${(e.export_format as string) || "json"} export — ${(e.status as string) || "completed"}${e.record_count ? ` (${e.record_count} records)` : ""}`,
+    if (!actionsData?.actions) return []
+    return (actionsData.actions as Record<string, unknown>[]).map((action, i) => ({
+      id: (action.id as string) || `AUD-${i + 1}`,
+      action: (action.action_type as string) || "Unknown",
+      user: (action.requested_by as string) || "System",
+      timestamp: ((action.created_at as string) || "").replace("T", " ").slice(0, 16),
+      details: `${(action.description as string) || "No details"} — Status: ${(action.status as string) || "pending"}`,
       type: "access" as const,
     }))
-  }, [exportData])
+  }, [actionsData])
 
   const users = useMemo(() => [...new Set(auditLogs.map((l) => l.user))], [auditLogs])
   const types = useMemo(() => [...new Set(auditLogs.map((l) => l.type))], [auditLogs])
