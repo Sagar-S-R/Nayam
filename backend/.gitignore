@@ -1,0 +1,25 @@
+# Backend — gitignore
+# =====================
+
+# Secrets
+.env
+
+# # SQLite dev databases
+# *.db
+# *.sqlite3
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Upload / export dirs (mounted as Docker volumes)
+uploads/
+exports/

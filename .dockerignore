@@ -24,13 +24,13 @@ __pycache__
 *.swo
 
 # Tests (not needed in production image)
-tests/
+backend/tests/
 .pytest_cache
 
 # Documentation / design docs
-*.txt
 *.md
 docs/
+backend/.env*
 
 # OS files
 .DS_Store

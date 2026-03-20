@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc libpq-dev libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
@@ -37,9 +37,9 @@ RUN groupadd -r nayam && useradd -r -g nayam -m nayam
 WORKDIR /app
 
 # Copy application code
-COPY alembic/ ./alembic/
-COPY alembic.ini .
-COPY app/ ./app/
+COPY backend/alembic/ ./alembic/
+COPY backend/alembic.ini .
+COPY backend/app/ ./app/
 
 # Create writable directories
 RUN mkdir -p uploads exports && chown -R nayam:nayam /app

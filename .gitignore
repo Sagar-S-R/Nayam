@@ -1,7 +1,6 @@
 # ===========================================
 # NAYAM — Git Ignore Rules
-# ===========================================
-
+# ==========================================
 # Environment
 .env
 venv/
@@ -11,6 +10,7 @@ env/
 # Temporary test artifacts
 tts_output.wav
 tts_audio_base64.txt
+test_output.txt
 *.mp3
 
 # Python
@@ -39,7 +39,6 @@ coverage.xml
 # Uploads (keep directory, ignore contents)
 uploads/*
 !uploads/.gitkeep
-*.txt
 # OS
 .DS_Store
 Thumbs.db
