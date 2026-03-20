@@ -15,7 +15,7 @@ from app.models.action import ActionRequest
 logger = logging.getLogger(__name__)
 
 async def process_meeting_audio(file: UploadFile, db: Session, user_id: str) -> Dict[str, Any]:
-    from meeting_mode import extract_meeting_minutes
+    from app.services.meeting_mode import extract_meeting_minutes
     # 1. Save and Transcribe
     audio_path, raw_bytes = await _save_audio(file)
     try:

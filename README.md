@@ -39,7 +39,8 @@ NAYAM is an AI-powered governance platform designed to serve as an intelligent c
 | **Multi-Language Issue Creation** | File grievances via voice in any Indian language with Bhashini ASR, with optional auto-translation to English via neural machine translation |
 | **Human-in-the-Loop Approvals** | Every AI-proposed mutation requires explicit human authorization before execution |
 | **Analytics and Predictive Intelligence** | Ward-level risk scoring, geo-spatial heatmaps, four-week trend forecasting, and anomaly detection |
-| **Enterprise Security** | JWT authentication, role-based access control (Leader/Staff/Analyst), per-IP rate limiting, structured audit logging |
+| **SLA & Deadline Tracking** | Priority-based automated deadline scheduling for issues with dashboard monitoring |
+| **Enterprise Security** | JWT authentication, role-based access control, PII Data Masking, Input/MIME Validation, per-IP rate limiting |
 
 ---
 
@@ -491,9 +492,10 @@ pytest --cov=app --cov-report=html  # Coverage report
 |---------|---------------|
 | Authentication | JWT tokens with configurable expiry (HS256 + bcrypt) |
 | Authorization | Role-based access control: Leader, Staff, Analyst |
+| Data Privacy | Strict API-level PII masking for citizen data based on user roles |
 | Rate Limiting | Per-IP sliding window with audit trail |
-| Input Validation | Pydantic v2 validation on every endpoint |
-| File Security | Extension whitelist, size limits, UUID filenames |
+| Input Validation | Pydantic v2 validation with Bleach text sanitization and python-magic MIME checking |
+| File Security | Extension whitelist, magic byte verification, size limits, UUID filenames |
 | AI Safety | Human-in-the-loop approvals for all AI-proposed mutations |
 | Observability | Structured logging with request-ID correlation, JSON output in production |
 | Secret Management | All sensitive configuration loaded from environment variables |

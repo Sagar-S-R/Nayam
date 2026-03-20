@@ -134,7 +134,7 @@ async def meeting_mode(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> MeetingModeResponse:
-    from meeting_service import process_meeting_audio
+    from app.services.meeting_service import process_meeting_audio
     
     # Optional size limits are now handled by main.py middleware, but we can double check:
     content = await file.read()

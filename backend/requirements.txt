@@ -88,3 +88,7 @@ prometheus-client==0.21.1
 
 # Docker health probe support (ASGI)
 async-timeout==5.0.1
+
+# Text Sanitization and MIME validation
+bleach==6.3.0
+python-magic-bin==0.4.14

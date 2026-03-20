@@ -42,9 +42,23 @@ async def upload_document(
 
     Requires: Leader or Staff role.
     """
+    from app.core.security_utils import validate_mime_type, sanitize_text
+    from fastapi import HTTPException
+    
+    chunk = await file.read(2048)
+    try:
+        validate_mime_type(chunk)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await file.seek(0)
+    
+    clean_title = sanitize_text(title)
+    if not clean_title or len(clean_title) < 2:
+        raise HTTPException(status_code=400, detail="Title cannot be empty after sanitization")
+
     service = DocumentService(db)
     document = await service.upload_document(
-        title=title,
+        title=clean_title,
         file=file,
         uploaded_by=current_user.id,
     )

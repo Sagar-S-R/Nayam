@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
+
+from app.core.security_utils import sanitize_text
 
 from app.models.issue import IssueStatus, IssuePriority
 
@@ -26,6 +28,11 @@ class IssueCreateRequest(BaseModel):
     longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
     location_description: Optional[str] = Field(None, max_length=500, description="Free-text location note")
 
+    @field_validator("department", "description", "location_description", mode="before")
+    @classmethod
+    def sanitize_inputs(cls, v):
+        return sanitize_text(v) if isinstance(v, str) else v
+
 
 class IssueUpdateRequest(BaseModel):
     """Schema for updating an existing issue. All fields optional."""
@@ -37,6 +44,11 @@ class IssueUpdateRequest(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     location_description: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("department", "description", "location_description", mode="before")
+    @classmethod
+    def sanitize_inputs(cls, v):
+        return sanitize_text(v) if isinstance(v, str) else v
 
 
 # ── Response Schemas ─────────────────────────────────────────────────

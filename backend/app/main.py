@@ -174,6 +174,28 @@ def create_app() -> FastAPI:
     app.include_router(drafts_router, prefix="/api/v1/drafts", tags=["Drafts"])
     app.include_router(bhashini_router, prefix="/api/v1/bhashini", tags=["Bhashini"])
 
+    # ── Global Validation Exception Handlers ───────────────────────
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+    from fastapi.exceptions import RequestValidationError
+
+    @app.exception_handler(ValueError)
+    async def value_error_handler(request: Request, exc: ValueError):
+        logger.warning("value_error", error=str(exc), path=request.url.path)
+        return JSONResponse(
+            status_code=400,
+            content={"detail": str(exc)},
+        )
+        
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        logger.warning("validation_error", error=str(exc.errors()), path=request.url.path)
+        msgs = [f"{err.get('loc', ('',))[-1]}: {err.get('msg')}" for err in exc.errors()]
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Validation error: " + " | ".join(msgs)},
+        )
+
     return app
 
 

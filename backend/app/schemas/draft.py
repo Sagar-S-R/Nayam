@@ -6,9 +6,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.draft import DraftType, DraftStatus
+from app.core.security_utils import sanitize_text
 
 
 # ── Request ──────────────────────────────────────────────────────────
@@ -21,6 +22,11 @@ class DraftGenerateRequest(BaseModel):
     department: Optional[str] = Field("", max_length=255)
     additional_context: Optional[str] = Field("", max_length=5000, description="Extra instructions or reference material")
 
+    @field_validator("topic", "additional_context", "department", mode="before")
+    @classmethod
+    def sanitize_inputs(cls, v):
+        return sanitize_text(v) if isinstance(v, str) else v
+
 
 class DraftUpdateRequest(BaseModel):
     """Update an existing draft. All fields optional."""
@@ -30,6 +36,11 @@ class DraftUpdateRequest(BaseModel):
     tone: Optional[str] = None
     audience: Optional[str] = None
     department: Optional[str] = None
+
+    @field_validator("title", "content", "department", mode="before")
+    @classmethod
+    def sanitize_inputs(cls, v):
+        return sanitize_text(v) if isinstance(v, str) else v
 
 
 # ── Response ─────────────────────────────────────────────────────────
