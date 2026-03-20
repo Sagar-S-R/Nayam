@@ -113,6 +113,11 @@ export async function createCitizen(payload: {
   return api.post<CitizenBackend>("/citizens", payload)
 }
 
+export async function fetchWards(): Promise<string[]> {
+  const response = await api.get<{ wards: string[] }>("/citizens/wards")
+  return response.wards
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // Issues
 // ═══════════════════════════════════════════════════════════════════════

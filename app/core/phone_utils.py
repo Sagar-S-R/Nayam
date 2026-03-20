@@ -26,7 +26,7 @@ def validate_indian_phone(phone: str) -> Tuple[bool, str]:
         Normalized format: 10-digit string without formatting.
     """
     # Remove all whitespace and dashes
-    cleaned = re.sub(r"[\s\-]", "", phone.strip())
+    cleaned = re.sub(r"[\s\-\.]", "", phone.strip())
     
     # Remove leading +91
     if cleaned.startswith("+91"):
@@ -42,10 +42,7 @@ def validate_indian_phone(phone: str) -> Tuple[bool, str]:
     if not re.match(r"^\d{10}$", cleaned):
         return False, ""
     
-    # Validate it's a realistic Indian number (2nd digit should be 6-9)
-    if cleaned[1] not in "6789":
-        return False, ""
-    
+    # Valid if 10 digits - no need to check 2nd digit as some numbers might not follow mobile pattern
     return True, cleaned
 
 

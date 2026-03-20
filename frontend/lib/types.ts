@@ -356,15 +356,15 @@ export interface EventUpdateRequest {
 
 // ── Drafts / Speech Generation ──────────────────────────────────────
 export type DraftType =
-  | "SPEECH"
-  | "OFFICIAL_RESPONSE"
-  | "PRESS_RELEASE"
-  | "POLICY_BRIEF"
-  | "MEETING_AGENDA"
-  | "PUBLIC_NOTICE"
-  | "LETTER"
-  | "RTI_RESPONSE"
-  | "CIRCULAR"
+  | "Speech"
+  | "Official Response"
+  | "Press Release"
+  | "Policy Brief"
+  | "Meeting Agenda"
+  | "Public Notice"
+  | "Formal Letter"
+  | "RTI Response"
+  | "Government Circular"
 
 export type DraftStatus = "GENERATING" | "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "PUBLISHED"
 

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/nayam/status-badge"
 import { useApiData } from "@/hooks/use-api-data"
-import { fetchCitizens, createCitizen } from "@/lib/services"
+import { fetchCitizens, createCitizen, fetchWards } from "@/lib/services"
 import { toast } from "sonner"
 import type { Citizen } from "@/lib/types"
 
@@ -48,16 +48,10 @@ export default function CitizensPage() {
 
   // Fetch ward list on mount
   useEffect(() => {
-    const fetchWards = async () => {
+    const loadWards = async () => {
       try {
-        const token = localStorage.getItem("auth_token")
-        const response = await fetch("/api/v1/citizens/wards", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setWardList(data.wards || [])
-        }
+        const wards = await fetchWards()
+        setWardList(wards)
       } catch (err) {
         console.error("Failed to fetch wards:", err)
         setWardList([]) // Fallback to empty
@@ -65,7 +59,7 @@ export default function CitizensPage() {
         setLoadingWards(false)
       }
     }
-    fetchWards()
+    loadWards()
   }, [])
 
   const dynamicWards = useMemo(() => [...new Set(allCitizens.map((c) => c.ward))], [allCitizens])
@@ -110,17 +104,28 @@ export default function CitizensPage() {
   }
 
   const handleAddCitizen = async () => {
+    console.log("Add citizen clicked", { newName, newContact, newWard, wardList })
+    
     if (!validateForm()) {
+      console.log("Form validation failed", { errors: validationErrors })
+      return
+    }
+    
+    if (wardList.length === 0) {
+      toast.error("Error", { description: "Ward list not loaded. Please refresh and try again." })
       return
     }
     
     setIsSubmitting(true)
     try {
+      console.log("Creating citizen with:", { newName, newContact, newWard })
       const newCitizen = await createCitizen({
         name: newName.trim(),
         contact_number: newContact.trim(),
         ward: newWard.trim(),
       })
+      
+      console.log("Citizen created:", newCitizen)
       
       // Show success toast
       toast.success("Citizen added successfully!", {
@@ -137,9 +142,28 @@ export default function CitizensPage() {
       // Refetch to show new citizen
       await refetch()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to add citizen"
-      toast.error("Error adding citizen", {
-        description: errorMessage,
+      console.error("Error adding citizen:", error)
+      
+      let userMessage = "Failed to add citizen"
+      const errorText = error instanceof Error ? error.message : ""
+      
+      // Provide actionable error messages
+      if (errorText.includes("already exists")) {
+        userMessage = "This citizen already exists in the database."
+      } else if (errorText.includes("Invalid") || errorText.includes("validation")) {
+        userMessage = "Please check your input. Phone number must be valid Indian format."
+      } else if (errorText.includes("Unauthorized") || errorText.includes("401")) {
+        userMessage = "Your session has expired. Please log in again."
+      } else if (errorText.includes("Forbidden") || errorText.includes("403")) {
+        userMessage = "You don't have permission to add citizens."
+      } else if (errorText.includes("network")) {
+        userMessage = "Network error. Please check your connection and try again."
+      } else if (errorText) {
+        userMessage = errorText
+      }
+      
+      toast.error("Could not add citizen", {
+        description: userMessage,
       })
     } finally {
       setIsSubmitting(false)
@@ -167,8 +191,13 @@ export default function CitizensPage() {
         </div>
         <button
           onClick={() => {
+            console.log("Add Citizen button clicked")
             setShowAddModal(true)
             setValidationErrors({})
+            setNewName("")
+            setNewContact("")
+            setNewWard("")
+            console.log("Modal opened, ward list:", wardList)
           }}
           className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
         >
@@ -345,7 +374,7 @@ export default function CitizensPage() {
 
       {/* Add Citizen Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="border-3 border-foreground rounded-none shadow-[8px_8px_0px_0px] shadow-foreground/20">
+        <DialogContent className="border-3 border-foreground rounded-none shadow-[8px_8px_0px_0px] shadow-foreground/20 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-black uppercase tracking-wider">
               Add New Citizen
@@ -360,6 +389,7 @@ export default function CitizensPage() {
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCitizen()}
                 className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
                   validationErrors.name
                     ? "border-red-500 bg-red-50 text-foreground"
@@ -380,6 +410,7 @@ export default function CitizensPage() {
                   type="text"
                   value={newContact}
                   onChange={(e) => setNewContact(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCitizen()}
                   className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
                     validationErrors.contact
                       ? "border-red-500 bg-red-50 text-foreground"
@@ -402,20 +433,29 @@ export default function CitizensPage() {
               <div className="relative">
                 <select
                   value={newWard}
-                  onChange={(e) => setNewWard(e.target.value)}
-                  disabled={loadingWards}
+                  onChange={(e) => {
+                    console.log("Ward selected:", e.target.value)
+                    setNewWard(e.target.value)
+                  }}
+                  disabled={loadingWards || wardList.length === 0}
                   className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
                     validationErrors.ward
                       ? "border-red-500 bg-red-50 text-foreground"
-                      : "border-foreground bg-background text-foreground"
+                      : wardList.length === 0
+                        ? "border-yellow-500 bg-yellow-50 text-foreground"
+                        : "border-foreground bg-background text-foreground"
                   }`}
                 >
                   <option value="">— Select Ward —</option>
-                  {wardList.map((ward) => (
-                    <option key={ward} value={ward}>
-                      {ward}
-                    </option>
-                  ))}
+                  {wardList && wardList.length > 0 ? (
+                    wardList.map((ward) => (
+                      <option key={ward} value={ward}>
+                        {ward}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Loading wards...</option>
+                  )}
                 </select>
                 {loadingWards && (
                   <Loader2 className="absolute right-3 top-3 h-5 w-5 animate-spin text-muted-foreground" />
@@ -435,12 +475,16 @@ export default function CitizensPage() {
               Cancel
             </button>
             <button
-              onClick={handleAddCitizen}
-              disabled={isSubmitting}
-              className="border-2 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2"
+              onClick={() => {
+                console.log("Submit button clicked")
+                handleAddCitizen()
+              }}
+              type="button"
+              disabled={isSubmitting || wardList.length === 0}
+              className="border-2 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2 w-full justify-center"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isSubmitting ? "Adding..." : "Add Citizen"}
+              {isSubmitting ? "Adding..." : wardList.length === 0 ? "Loading wards..." : "Add Citizen"}
             </button>
           </DialogFooter>
         </DialogContent>

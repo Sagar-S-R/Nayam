@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/nayam/status-badge"
 import { ChartCard } from "@/components/nayam/chart-card"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchComplianceExports } from "@/lib/services"
+import { toast } from "sonner"
 import type { AuditLog } from "@/lib/types"
 
 export default function CompliancePage() {
@@ -33,6 +34,16 @@ export default function CompliancePage() {
     setIsExporting(true)
     try {
       const token = localStorage.getItem("auth_token")
+      
+      // Check authentication
+      if (!token) {
+        toast.error("Not authenticated", {
+          description: "Please log in to export the audit trail PDF.",
+        })
+        setIsExporting(false)
+        return
+      }
+
       const endpoint = `/api/v1/compliance/audit-trail/pdf?include_hindi=${includeHindi}`
       const response = await fetch(endpoint, {
         method: "GET",
@@ -41,8 +52,48 @@ export default function CompliancePage() {
         },
       })
 
+      // Handle specific HTTP errors
+      if (response.status === 401) {
+        toast.error("Session expired", {
+          description: "Your login session has expired. Please log in again.",
+        })
+        localStorage.removeItem("auth_token")
+        return
+      }
+
+      if (response.status === 403) {
+        toast.error("Access denied", {
+          description: "You don't have permission to export the audit trail. Contact your administrator.",
+        })
+        return
+      }
+
+      if (response.status === 404) {
+        toast.error("Not found", {
+          description: "The audit trail PDF endpoint is not available.",
+        })
+        return
+      }
+
+      if (response.status === 500) {
+        toast.error("Server error", {
+          description: "The server encountered an error. Please try again later.",
+        })
+        return
+      }
+
       if (!response.ok) {
-        throw new Error(`Export failed: ${response.statusText}`)
+        // Try to parse error message from response
+        try {
+          const errorData = await response.json()
+          const detail = errorData.detail || `HTTP ${response.status}`
+          toast.error("Export failed", { description: String(detail) })
+        } catch {
+          toast.error("Export failed", {
+            description: `Server returned error ${response.status}. Please try again.`,
+          })
+        }
+        return
       }
 
       // Get filename from Content-Disposition header
@@ -57,6 +108,13 @@ export default function CompliancePage() {
 
       // Create blob and download
       const blob = await response.blob()
+      if (blob.size === 0) {
+        toast.error("Empty file", {
+          description: "The PDF file is empty. Please check the audit trail data.",
+        })
+        return
+      }
+
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
@@ -65,9 +123,15 @@ export default function CompliancePage() {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
+
+      toast.success("PDF exported", {
+        description: `${filename} has been downloaded successfully.`,
+      })
     } catch (error) {
       console.error("PDF export error:", error)
-      alert(`Failed to export PDF: ${error instanceof Error ? error.message : "Unknown error"}`)
+      toast.error("Export failed", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+      })
     } finally {
       setIsExporting(false)
     }

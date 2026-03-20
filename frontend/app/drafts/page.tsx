@@ -35,19 +35,20 @@ import {
 } from "@/components/ui/dialog"
 import { useApiData } from "@/hooks/use-api-data"
 import { fetchDrafts, generateDraft, updateDraft, deleteDraft } from "@/lib/services"
+import { toast } from "sonner"
 import type { DraftBackend, DraftType, DraftStatus, DraftGenerateRequest } from "@/lib/types"
 
 // ── Constants ───────────────────────────────────────────────────────
 const DRAFT_TYPE_INFO: Record<DraftType, { label: string; icon: string; description: string }> = {
-  SPEECH: { label: "Speech", icon: "🎤", description: "Public address, event speech, official statements" },
-  OFFICIAL_RESPONSE: { label: "Official Response", icon: "📋", description: "Formal reply to complaints, petitions, RTI" },
-  PRESS_RELEASE: { label: "Press Release", icon: "📰", description: "Media communication, announcements" },
-  POLICY_BRIEF: { label: "Policy Brief", icon: "📊", description: "Analysis and recommendations for leadership" },
-  MEETING_AGENDA: { label: "Meeting Agenda", icon: "📝", description: "Structured agenda with items and time" },
-  PUBLIC_NOTICE: { label: "Public Notice", icon: "📢", description: "Official notices for citizens" },
-  LETTER: { label: "Formal Letter", icon: "✉️", description: "Official government correspondence" },
-  RTI_RESPONSE: { label: "RTI Response", icon: "🔍", description: "Right to Information Act response" },
-  CIRCULAR: { label: "Govt. Circular", icon: "🏛️", description: "Internal government circulars and orders" },
+  Speech: { label: "Speech", icon: "🎤", description: "Public address, event speech, official statements" },
+  "Official Response": { label: "Official Response", icon: "📋", description: "Formal reply to complaints, petitions, RTI" },
+  "Press Release": { label: "Press Release", icon: "📰", description: "Media communication, announcements" },
+  "Policy Brief": { label: "Policy Brief", icon: "📊", description: "Analysis and recommendations for leadership" },
+  "Meeting Agenda": { label: "Meeting Agenda", icon: "📝", description: "Structured agenda with items and time" },
+  "Public Notice": { label: "Public Notice", icon: "📢", description: "Official notices for citizens" },
+  "Formal Letter": { label: "Formal Letter", icon: "✉️", description: "Official government correspondence" },
+  "RTI Response": { label: "RTI Response", icon: "🔍", description: "Right to Information Act response" },
+  "Government Circular": { label: "Govt. Circular", icon: "🏛️", description: "Internal government circulars and orders" },
 }
 
 const STATUS_COLORS: Record<DraftStatus, string> = {
@@ -149,9 +150,20 @@ export default function DraftsPage() {
   // ── Handlers ──────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!genType || !genTopic.trim()) {
-      setGenError("Select a template type and enter a topic.")
+      toast.error("Missing information", {
+        description: "Please select a template type and enter a topic.",
+      })
       return
     }
+
+    // Validate topic length
+    if (genTopic.trim().length < 5) {
+      toast.error("Topic too short", {
+        description: "Please enter at least 5 characters for the topic.",
+      })
+      return
+    }
+
     setGenerating(true)
     setGenError("")
     try {
@@ -163,7 +175,13 @@ export default function DraftsPage() {
         department: genDepartment.trim(),
         additional_context: genContext.trim(),
       }
+      
       const draft = await generateDraft(payload)
+      
+      toast.success("Draft generated", {
+        description: `${draft.title} has been generated successfully.`,
+      })
+      
       setShowGenerate(false)
       resetGenForm()
       await refetch()
@@ -172,7 +190,22 @@ export default function DraftsPage() {
       setEditContent(draft.content)
       setEditTitle(draft.title)
     } catch (err) {
-      setGenError(err instanceof Error ? err.message : "Generation failed")
+      const errorMsg = err instanceof Error ? err.message : "Generation failed"
+      
+      // Provide actionable error messages
+      let userMessage = errorMsg
+      if (errorMsg.includes("Unauthorized") || errorMsg.includes("401")) {
+        userMessage = "Your session has expired. Please log in again."
+      } else if (errorMsg.includes("Forbidden") || errorMsg.includes("403")) {
+        userMessage = "You don't have permission to generate drafts."
+      } else if (errorMsg.includes("Invalid") || errorMsg.includes("validation")) {
+        userMessage = "Please check your input and try again."
+      } else if (errorMsg.includes("timeout") || errorMsg.includes("network")) {
+        userMessage = "Network error. Please check your connection and try again."
+      }
+      
+      toast.error("Generation failed", { description: userMessage })
+      setGenError(userMessage)
     } finally {
       setGenerating(false)
     }
@@ -189,8 +222,12 @@ export default function DraftsPage() {
       setSelectedDraft(updated)
       setEditMode(false)
       await refetch()
-    } catch {
-      // ignore
+      toast.success("Draft saved", {
+        description: "Your changes have been saved successfully.",
+      })
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to save draft"
+      toast.error("Save failed", { description: errorMsg })
     } finally {
       setSaving(false)
     }
@@ -203,8 +240,12 @@ export default function DraftsPage() {
         setSelectedDraft(updated)
       }
       await refetch()
-    } catch {
-      // ignore
+      toast.success("Status updated", {
+        description: `Draft status changed to ${status}.`,
+      })
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to update status"
+      toast.error("Update failed", { description: errorMsg })
     }
   }
 
@@ -215,8 +256,12 @@ export default function DraftsPage() {
       setShowDeleteId(null)
       if (selectedDraft?.id === id) setSelectedDraft(null)
       await refetch()
-    } catch {
-      // ignore
+      toast.success("Draft deleted", {
+        description: "The draft has been permanently deleted.",
+      })
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to delete draft"
+      toast.error("Delete failed", { description: errorMsg })
     } finally {
       setDeleting(false)
     }

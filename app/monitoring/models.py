@@ -60,7 +60,7 @@ class PerformanceMetric(Base):
     unit = Column(String(20), nullable=False, default="ms")
     status_code = Column(Integer, nullable=True)
     node_id = Column(String(100), nullable=True)
-    metadata_json = Column("metadata", JSON, nullable=True)
+    metadata_json = Column(JSON, nullable=True)
     recorded_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
