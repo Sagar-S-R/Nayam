@@ -87,6 +87,7 @@ export async function fetchCitizens(params?: {
   limit?: number
   ward?: string
   search?: string
+  show_pii?: boolean
 }): Promise<{ total: number; citizens: Citizen[] }> {
   const data = await api.get<CitizenListResponse>("/citizens", params)
 

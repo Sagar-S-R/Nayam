@@ -78,6 +78,7 @@ def list_citizens(
     limit: int = Query(50, ge=1, le=500, description="Max records to return"),
     ward: Optional[str] = Query(None, description="Filter by ward"),
     search: Optional[str] = Query(None, description="Search by name"),
+    show_pii: bool = Query(False, description="Show PII (Leader/Staff only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CitizenListResponse:
@@ -88,9 +89,18 @@ def list_citizens(
     """
     service = CitizenService(db)
     citizens, total = service.list_citizens(skip=skip, limit=limit, ward=ward, search=search)
+    
+    responses = []
+    can_see_pii = current_user.role in [UserRole.LEADER, UserRole.STAFF]
+    for c in citizens:
+        resp = CitizenResponse.model_validate(c)
+        if not (show_pii and can_see_pii):
+            resp.contact_number = resp.masked_contact
+        responses.append(resp)
+        
     return CitizenListResponse(
         total=total,
-        citizens=[CitizenResponse.model_validate(c) for c in citizens],
+        citizens=responses,
     )
 
 
@@ -101,6 +111,7 @@ def list_citizens(
 )
 def get_citizen(
     citizen_id: UUID,
+    show_pii: bool = Query(False, description="Show PII (Leader/Staff only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CitizenResponse:
@@ -111,7 +122,13 @@ def get_citizen(
     """
     service = CitizenService(db)
     citizen = service.get_citizen(citizen_id)
-    return CitizenResponse.model_validate(citizen)
+    
+    resp = CitizenResponse.model_validate(citizen)
+    can_see_pii = current_user.role in [UserRole.LEADER, UserRole.STAFF]
+    if not (show_pii and can_see_pii):
+        resp.contact_number = resp.masked_contact
+        
+    return resp
 
 
 @router.put(

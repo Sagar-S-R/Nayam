@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react"
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, Loader2, CheckCircle, Lock, Eye } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -29,21 +29,38 @@ export default function CitizensPage() {
   const [riskFilter, setRiskFilter] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedCitizen, setSelectedCitizen] = useState<string | null>(null)
-  
+
+  // PII Toggle State
+  const [showPii, setShowPii] = useState(false)
+  const [userRole, setUserRole] = useState("")
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem("nayam_user")
+      if (userStr) {
+        setUserRole(JSON.parse(userStr).role || "Analyst")
+      } else {
+        setUserRole("Analyst")
+      }
+    } catch {
+      setUserRole("Analyst")
+    }
+  }, [])
+
   // Form state
   const [newName, setNewName] = useState("")
   const [newContact, setNewContact] = useState("")
   const [newWard, setNewWard] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   //  Validation messages
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  
+
   // Ward list
   const [wardList, setWardList] = useState<string[]>([])
   const [loadingWards, setLoadingWards] = useState(true)
 
-  const { data, isLoading, refetch } = useApiData(() => fetchCitizens({ limit: 200 }), [])
+  const { data, isLoading, refetch } = useApiData(() => fetchCitizens({ limit: 200, show_pii: showPii }), [showPii])
   const allCitizens: Citizen[] = data?.citizens || []
 
   // Fetch ward list on mount
@@ -80,7 +97,7 @@ export default function CitizensPage() {
   // Validate form inputs
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
-    
+
     if (!newName.trim()) {
       errors.name = "Name is required"
     } else if (newName.trim().length < 2) {
@@ -88,34 +105,34 @@ export default function CitizensPage() {
     } else if (!/[a-zA-Z]/.test(newName)) {
       errors.name = "Name must contain letters"
     }
-    
+
     if (!newContact.trim()) {
       errors.contact = "Phone number is required"
     } else if (!/^\d{10}$|^\+91\d{10}$|^91\d{10}$|^0\d{10}$/.test(newContact.replace(/[\s\-]/g, ""))) {
       errors.contact = "Invalid phone format. Use Indian format: +91XXXXXXXXXX or XXXXXXXXXX"
     }
-    
+
     if (!newWard.trim()) {
       errors.ward = "Ward is required"
     }
-    
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   const handleAddCitizen = async () => {
     console.log("Add citizen clicked", { newName, newContact, newWard, wardList })
-    
+
     if (!validateForm()) {
       console.log("Form validation failed", { errors: validationErrors })
       return
     }
-    
+
     if (wardList.length === 0) {
       toast.error("Error", { description: "Ward list not loaded. Please refresh and try again." })
       return
     }
-    
+
     setIsSubmitting(true)
     try {
       console.log("Creating citizen with:", { newName, newContact, newWard })
@@ -124,29 +141,29 @@ export default function CitizensPage() {
         contact_number: newContact.trim(),
         ward: newWard.trim(),
       })
-      
+
       console.log("Citizen created:", newCitizen)
-      
+
       // Show success toast
       toast.success("Citizen added successfully!", {
         description: `${newName} has been added to Ward ${newWard}`,
       })
-      
+
       // Reset form
       setShowAddModal(false)
       setNewName("")
       setNewContact("")
       setNewWard("")
       setValidationErrors({})
-      
+
       // Refetch to show new citizen
       await refetch()
     } catch (error) {
       console.error("Error adding citizen:", error)
-      
+
       let userMessage = "Failed to add citizen"
       const errorText = error instanceof Error ? error.message : ""
-      
+
       // Provide actionable error messages
       if (errorText.includes("already exists")) {
         userMessage = "This citizen already exists in the database."
@@ -161,7 +178,7 @@ export default function CitizensPage() {
       } else if (errorText) {
         userMessage = errorText
       }
-      
+
       toast.error("Could not add citizen", {
         description: userMessage,
       })
@@ -189,21 +206,37 @@ export default function CitizensPage() {
             Citizen records and profile management
           </p>
         </div>
-        <button
-          onClick={() => {
-            console.log("Add Citizen button clicked")
-            setShowAddModal(true)
-            setValidationErrors({})
-            setNewName("")
-            setNewContact("")
-            setNewWard("")
-            console.log("Modal opened, ward list:", wardList)
-          }}
-          className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
-        >
-          <Plus className="h-4 w-4" />
-          Add Citizen
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPii(!showPii)}
+            disabled={userRole === "Analyst"}
+            className={`flex items-center gap-2 border-3 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 ${userRole === "Analyst"
+              ? "border-foreground/30 bg-muted text-muted-foreground cursor-not-allowed"
+              : showPii
+                ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-[4px_4px_0px_0px] shadow-emerald-600/20 hover:shadow-[6px_6px_0px_0px]"
+                : "border-foreground bg-background text-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 hover:shadow-[6px_6px_0px_0px]"
+              }`}
+            title={userRole === "Analyst" ? "Analyst access restricted" : "Toggle sensitive data"}
+          >
+            {showPii ? <Eye className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+            {showPii ? "Hide PII" : "Show PII"}
+          </button>
+          <button
+            onClick={() => {
+              console.log("Add Citizen button clicked")
+              setShowAddModal(true)
+              setValidationErrors({})
+              setNewName("")
+              setNewContact("")
+              setNewWard("")
+              console.log("Modal opened, ward list:", wardList)
+            }}
+            className="flex items-center gap-2 border-3 border-foreground bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[6px_6px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
+          >
+            <Plus className="h-4 w-4" />
+            Add Citizen
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -268,7 +301,12 @@ export default function CitizensPage() {
                     <p className="text-[10px] font-mono text-muted-foreground">{c.id}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm font-mono text-foreground">{c.maskedContact || c.contact}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5 font-mono text-sm text-foreground">
+                    {showPii ? <Eye className="h-3.5 w-3.5 text-muted-foreground" /> : <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {c.contact}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <span className="text-sm font-semibold text-foreground">{c.ward}</span>
                 </TableCell>
@@ -331,7 +369,10 @@ export default function CitizensPage() {
                 </div>
                 <div className="border-2 border-foreground p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</p>
-                  <p className="mt-1 text-sm font-mono text-foreground">{citizen.maskedContact || citizen.contact}</p>
+                  <p className="mt-1 text-sm font-mono text-foreground flex items-center gap-1.5">
+                    {showPii ? <Eye className="h-3.5 w-3.5 text-muted-foreground" /> : <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {citizen.contact}
+                  </p>
                 </div>
                 <div className="border-2 border-foreground p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ward</p>
@@ -390,11 +431,10 @@ export default function CitizensPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCitizen()}
-                className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
-                  validationErrors.name
-                    ? "border-red-500 bg-red-50 text-foreground"
-                    : "border-foreground bg-background text-foreground"
-                }`}
+                className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${validationErrors.name
+                  ? "border-red-500 bg-red-50 text-foreground"
+                  : "border-foreground bg-background text-foreground"
+                  }`}
                 placeholder="Enter full name"
               />
               {validationErrors.name && (
@@ -411,11 +451,10 @@ export default function CitizensPage() {
                   value={newContact}
                   onChange={(e) => setNewContact(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCitizen()}
-                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
-                    validationErrors.contact
-                      ? "border-red-500 bg-red-50 text-foreground"
-                      : "border-foreground bg-background text-foreground"
-                  }`}
+                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${validationErrors.contact
+                    ? "border-red-500 bg-red-50 text-foreground"
+                    : "border-foreground bg-background text-foreground"
+                    }`}
                   placeholder="+91 XXXXX XXXXX or XXXXXXXXXX"
                 />
                 {!validationErrors.contact && newContact && /^\d{10}$|^\+91\d{10}$|^91\d{10}$|^0\d{10}$/.test(newContact.replace(/[\s\-]/g, "")) && (
@@ -438,13 +477,12 @@ export default function CitizensPage() {
                     setNewWard(e.target.value)
                   }}
                   disabled={loadingWards || wardList.length === 0}
-                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${
-                    validationErrors.ward
-                      ? "border-red-500 bg-red-50 text-foreground"
-                      : wardList.length === 0
-                        ? "border-yellow-500 bg-yellow-50 text-foreground"
-                        : "border-foreground bg-background text-foreground"
-                  }`}
+                  className={`mt-1 w-full border-2 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary ${validationErrors.ward
+                    ? "border-red-500 bg-red-50 text-foreground"
+                    : wardList.length === 0
+                      ? "border-yellow-500 bg-yellow-50 text-foreground"
+                      : "border-foreground bg-background text-foreground"
+                    }`}
                 >
                   <option value="">— Select Ward —</option>
                   {wardList && wardList.length > 0 ? (
