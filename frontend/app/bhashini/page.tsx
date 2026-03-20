@@ -124,11 +124,10 @@ export default function BhashiniPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-              activeTab === tab.key
+            className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === tab.key
                 ? "border-2 border-foreground bg-primary text-primary-foreground shadow-[2px_2px_0px_0px] shadow-foreground/20"
                 : "border-2 border-transparent text-muted-foreground hover:bg-muted"
-            }`}
+              }`}
           >
             {tab.icon}
             <span className="hidden sm:inline">{tab.label}</span>
@@ -179,7 +178,7 @@ function ASRTab() {
   const [citizens, setCitizens] = useState<Citizen[]>([])
   const [selectedCitizenId, setSelectedCitizenId] = useState("")
   useEffect(() => {
-    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens)).catch(() => {})
+    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens)).catch(() => { })
   }, [])
 
   const startRecording = useCallback(async () => {
@@ -339,11 +338,10 @@ function ASRTab() {
             <button
               onClick={recording ? stopRecording : startRecording}
               disabled={loading}
-              className={`flex h-20 w-20 items-center justify-center border-3 border-foreground transition-all ${
-                recording
+              className={`flex h-20 w-20 items-center justify-center border-3 border-foreground transition-all ${recording
                   ? "animate-pulse bg-destructive text-destructive-foreground shadow-[4px_4px_0px_0px] shadow-foreground/30"
                   : "bg-primary text-primary-foreground shadow-[4px_4px_0px_0px] shadow-foreground/20 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px]"
-              }`}
+                }`}
             >
               {loading ? (
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -677,11 +675,10 @@ function TTSTab() {
               <button
                 key={g}
                 onClick={() => setGender(g)}
-                className={`border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                  gender === g
+                className={`border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${gender === g
                     ? "border-foreground bg-primary text-primary-foreground"
                     : "border-foreground/30 text-muted-foreground hover:bg-muted"
-                }`}
+                  }`}
               >
                 {g}
               </button>
@@ -881,7 +878,7 @@ function MeetingModeTab() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState("")
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
@@ -903,12 +900,12 @@ function MeetingModeTab() {
           const formData = new FormData()
           formData.append("file", blob, "meeting.webm")
           const token = localStorage.getItem("nayam_token")
-          const response = await fetch(${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/stt/meeting-mode, {
-             method: 'POST',
-             headers: {
-                 'Authorization': Bearer 
-             },
-             body: formData
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/stt/meeting-mode`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
           })
           if (!response.ok) throw new Error("Meeting extraction failed")
           const data = await response.json()
@@ -938,7 +935,7 @@ function MeetingModeTab() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-6">
-        
+
         {/* Left: Input */}
         <div className="border-3 border-foreground bg-card p-6 shadow-[8px_8px_0px_0px] shadow-foreground/20">
           <div className="flex items-center gap-3 mb-6 border-b-2 border-foreground/20 pb-4">
@@ -953,8 +950,7 @@ function MeetingModeTab() {
             <button
               onClick={recording ? stopRecording : startRecording}
               disabled={loading}
-              className={
-elative flex h-24 w-24 items-center justify-center rounded-full border-4 transition-all  }
+              className={`relative flex h-24 w-24 items-center justify-center rounded-full border-4 transition-all ${recording ? "border-red-600 animate-pulse text-red-600" : "border-foreground text-foreground hover:bg-muted"}`}
             >
               {recording ? <Square className="h-8 w-8" /> : loading ? <Loader2 className="h-8 w-8 animate-spin" /> : <Mic className="h-8 w-8" />}
             </button>
@@ -973,24 +969,24 @@ elative flex h-24 w-24 items-center justify-center rounded-full border-4 transit
               <div className="border-2 border-foreground bg-muted/20 p-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2">Extraction Summary</h3>
                 <p className="text-sm text-foreground mb-2">{result.extraction.summary}</p>
-                
+
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2 mt-4">Key Decisions</h3>
                 <ul className="list-disc pl-5 text-sm text-foreground">
-                  {result.extraction.key_decisions.map((d:string, i:number) => <li key={i}>{d}</li>)}
+                  {result.extraction.key_decisions.map((d: string, i: number) => <li key={i}>{d}</li>)}
                 </ul>
-                
+
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-foreground/20 pb-2 mb-2 mt-4">Action Items ({result.created_action_requests} pending)</h3>
                 <ul className="list-disc pl-5 text-sm text-foreground">
-                  {result.extraction.action_items.map((a:any, i:number) => (
+                  {result.extraction.action_items.map((a: any, i: number) => (
                     <li key={i}><strong>{a.task}</strong> ({a.department} - {a.deadline})</li>
                   ))}
                 </ul>
               </div>
             </div>
           ) : (
-             <div className="flex h-40 items-center justify-center border-2 border-dashed border-foreground/20">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No output yet</span>
-             </div>
+            <div className="flex h-40 items-center justify-center border-2 border-dashed border-foreground/20">
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">No output yet</span>
+            </div>
           )}
         </div>
 

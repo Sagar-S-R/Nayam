@@ -36,6 +36,7 @@ class RecentDocument(BaseModel):
 class DashboardResponse(BaseModel):
     """Aggregated dashboard data response."""
     total_issues: int
+    overdue_issues: int
     issues_by_department: list[DepartmentCount]
     issues_by_status: list[StatusCount]
     total_documents: int

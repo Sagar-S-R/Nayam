@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
 import {
   AlertCircle,
   Briefcase,
@@ -150,7 +151,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Cards Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <SummaryCard
           title="Total Issues"
           value={totalIssues}
@@ -166,6 +167,15 @@ export default function DashboardPage() {
           subtitle="currently open"
           variant="warning"
         />
+        <Link href="/issues?overdue=true" className="block focus:outline-none focus:ring-2 focus:ring-primary border-transparent">
+          <SummaryCard
+            title="Overdue SLA"
+            value={dashboard?.overdue_issues ?? 0}
+            icon={AlertCircle}
+            subtitle="breached deadlines"
+            variant="danger"
+          />
+        </Link>
         <SummaryCard
           title="Risk Score"
           value={avgRisk}
@@ -333,11 +343,10 @@ export default function DashboardPage() {
                   <p className="text-[10px] font-mono text-muted-foreground">{item.timestamp}</p>
                 </div>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${
-                    item.status === "success"
+                  className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${item.status === "success"
                       ? "border-emerald-900 bg-emerald-100 text-emerald-900"
                       : "border-amber-900 bg-amber-100 text-amber-900"
-                  }`}
+                    }`}
                 >
                   {item.status}
                 </span>

@@ -28,6 +28,15 @@ export default function IssuesPage() {
   const [priorityFilter, setPriorityFilter] = useState("")
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null)
 
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search)
+      if (p.get("overdue") === "true") setShowOverdueOnly(true)
+    }
+  }, [])
+
   // ── Create Issue State ─────────────────────────────
   const [showCreate, setShowCreate] = useState(false)
   const [createCitizenId, setCreateCitizenId] = useState("")
@@ -55,13 +64,13 @@ export default function IssuesPage() {
   const [detailTransLoading, setDetailTransLoading] = useState(false)
   const [detailTransResult, setDetailTransResult] = useState<string | null>(null)
 
-  const { data, isLoading, refetch } = useApiData(() => fetchIssues({ limit: 500 }), [])
+  const { data, isLoading, refetch } = useApiData(() => fetchIssues({ limit: 500, overdue: showOverdueOnly ? true : undefined }), [showOverdueOnly])
   const allIssues: Issue[] = data?.issues || []
 
   // Fetch citizens for dropdown
   const [citizens, setCitizens] = useState<Citizen[]>([])
   useEffect(() => {
-    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens || [])).catch(() => {})
+    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens || [])).catch(() => { })
   }, [])
 
   const departments = useMemo(() => [...new Set(allIssues.map((i) => i.department))], [allIssues])
@@ -318,9 +327,8 @@ export default function IssuesPage() {
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isProcessingVoice}
-                  className={`flex items-center justify-center h-[38px] w-[38px] border-2 ${
-                    isRecording ? "border-red-600 bg-red-600 text-white animate-pulse" : "border-foreground bg-orange-600 text-white"
-                  } disabled:opacity-50`}
+                  className={`flex items-center justify-center h-[38px] w-[38px] border-2 ${isRecording ? "border-red-600 bg-red-600 text-white animate-pulse" : "border-foreground bg-orange-600 text-white"
+                    } disabled:opacity-50`}
                   title={isRecording ? "Stop recording" : "Record voice issue"}
                 >
                   {isProcessingVoice ? <Loader2 className="h-4 w-4 animate-spin" /> : isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -390,7 +398,16 @@ export default function IssuesPage() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+          <label className="flex items-center gap-2 border-2 border-foreground bg-card px-3 py-2 text-xs font-bold uppercase text-foreground cursor-pointer hover:bg-muted transition-colors">
+            <input
+              type="checkbox"
+              checked={showOverdueOnly}
+              onChange={(e) => setShowOverdueOnly(e.target.checked)}
+              className="accent-red-600 h-3 w-3"
+            />
+            <span className={showOverdueOnly ? "text-red-700" : ""}>Overdue</span>
+          </label>
+          <Filter className="h-4 w-4 text-muted-foreground ml-1" />
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -449,6 +466,7 @@ export default function IssuesPage() {
                 <TableCell className="text-sm text-foreground">{i.department}</TableCell>
                 <TableCell>
                   <StatusBadge status={i.status} variant="status" />
+                  {i.isOverdue && <span className="ml-2 px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold tracking-wider">OVERDUE</span>}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={i.priority} variant="priority" />
@@ -456,15 +474,14 @@ export default function IssuesPage() {
                 <TableCell className="text-sm font-semibold text-foreground">{i.ward}</TableCell>
                 <TableCell>
                   <span
-                    className={`text-sm font-black ${
-                      i.riskScore >= 80
-                        ? "text-red-700"
-                        : i.riskScore >= 60
+                    className={`text-sm font-black ${i.riskScore >= 80
+                      ? "text-red-700"
+                      : i.riskScore >= 60
                         ? "text-orange-700"
                         : i.riskScore >= 40
-                        ? "text-amber-700"
-                        : "text-emerald-700"
-                    }`}
+                          ? "text-amber-700"
+                          : "text-emerald-700"
+                      }`}
                   >
                     {i.riskScore}
                   </span>
@@ -515,6 +532,7 @@ export default function IssuesPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <StatusBadge status={issue.status} />
                 <StatusBadge status={issue.priority} variant="priority" />
+                {issue.isOverdue && <span className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold tracking-wider animate-pulse">OVERDUE</span>}
                 <span className="text-xs font-mono text-muted-foreground">
                   Risk Score: <span className="font-black text-foreground">{issue.riskScore}</span>
                 </span>
@@ -586,16 +604,16 @@ export default function IssuesPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-xs">
                       <span className="font-mono text-muted-foreground">{issue.createdDate}</span>
-                      <span className="font-semibold text-foreground">Issue created</span>
+                      <span className="font-semibold text-foreground">Issue logged</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-mono text-muted-foreground">2026-02-22</span>
-                      <span className="font-semibold text-foreground">Assigned to department</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-mono text-muted-foreground">2026-02-25</span>
-                      <span className="font-semibold text-foreground">AI analysis completed</span>
-                    </div>
+                    {issue.slaDeadline && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={`font-mono ${issue.isOverdue ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+                          {new Date(issue.slaDeadline).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={`font-semibold ${issue.isOverdue ? 'text-red-600 font-bold' : 'text-foreground'}`}>SLA Deadline</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -609,12 +627,12 @@ export default function IssuesPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Speak in</label>
-                      <select value={detailTtsLang} onChange={(e) =>
-<option value="en">English</option>
-<option value="hi">Hindi</option>
-<option value="ur">Urdu</option>
-<option value="pa">Punjabi</option>
-</select>
+                      <select value={detailTtsLang} onChange={(e) => setDetailTtsLang(e.target.value)} className="mt-0.5 block w-24 border border-foreground/50 bg-background px-2 py-1 text-xs">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ur">Urdu</option>
+                        <option value="pa">Punjabi</option>
+                      </select>
                     </div>
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Voice</label>
@@ -633,12 +651,12 @@ export default function IssuesPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Translate to</label>
-                      <select value={detailTransLang} onChange={(e) =>
-<option value="en">English</option>
-<option value="hi">Hindi</option>
-<option value="ur">Urdu</option>
-<option value="pa">Punjabi</option>
-</select>
+                      <select value={detailTransLang} onChange={(e) => setDetailTransLang(e.target.value)} className="mt-0.5 block w-24 border border-foreground/50 bg-background px-2 py-1 text-xs">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ur">Urdu</option>
+                        <option value="pa">Punjabi</option>
+                      </select>
                     </div>
                     <button onClick={handleDetailTranslate} disabled={detailTransLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-blue-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-blue-700 disabled:opacity-50">
                       {detailTransLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />}
@@ -659,7 +677,7 @@ export default function IssuesPage() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
-    </main>
+      </Dialog >
+    </main >
   )
 }

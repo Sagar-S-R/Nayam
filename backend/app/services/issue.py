@@ -10,6 +10,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta, timezone
 
 from app.models.issue import Issue, IssueStatus, IssuePriority
 from app.repositories.citizen import CitizenRepository
@@ -52,12 +53,22 @@ class IssueService:
                 detail=f"Citizen with id {payload.citizen_id} not found.",
             )
 
+        # Calculate SLA deadline
+        now = datetime.now(timezone.utc)
+        if payload.priority == IssuePriority.HIGH:
+            sla = now + timedelta(hours=24)
+        elif payload.priority == IssuePriority.LOW:
+            sla = now + timedelta(hours=168)
+        else:
+            sla = now + timedelta(hours=72)
+
         issue = Issue(
             citizen_id=payload.citizen_id,
             department=payload.department,
             description=payload.description,
             status=payload.status,
             priority=payload.priority,
+            sla_deadline=sla,
         )
         return self.repo.create(issue)
 
@@ -91,6 +102,7 @@ class IssueService:
         department: Optional[str] = None,
         citizen_id: Optional[UUID] = None,
         ward: Optional[str] = None,
+        overdue: Optional[bool] = None,
     ) -> Tuple[List[Issue], int]:
         """
         List issues with optional filtering and pagination.
@@ -103,6 +115,7 @@ class IssueService:
             department: Optional department filter.
             citizen_id: Optional citizen FK filter.
             ward: Optional ward filter (joins through citizen).
+            overdue: Optional overdue filter based on SLA.
 
         Returns:
             Tuple of (issues list, total count).
@@ -115,6 +128,7 @@ class IssueService:
             department=department,
             citizen_id=citizen_id,
             ward=ward,
+            overdue=overdue,
         )
 
     def update_issue(self, issue_id: UUID, payload: IssueUpdateRequest) -> Issue:

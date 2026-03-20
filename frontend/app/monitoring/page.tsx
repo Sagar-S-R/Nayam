@@ -14,7 +14,7 @@ import {
   Tooltip,
 } from "recharts"
 import { useApiData } from "@/hooks/use-api-data"
-import { fetchHealthDeep, fetchMetrics, fetchBhashiniHealth } from "@/lib/services"
+import { fetchHealthDeep, fetchMetrics, bhashiniHealth as fetchBhashiniHealth } from "@/lib/services"
 import type { HealthProbeResponse, MetricBackend, MetricListResponse } from "@/lib/types"
 
 export default function MonitoringPage() {
@@ -168,11 +168,10 @@ export default function MonitoringPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono text-muted-foreground">{service.uptime}</span>
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border ${
-                      service.status === "operational"
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border ${service.status === "operational"
                         ? "border-emerald-900 bg-emerald-100 text-emerald-900"
                         : "border-amber-900 bg-amber-100 text-amber-900"
-                    }`}
+                      }`}
                   >
                     {service.status}
                   </span>
@@ -189,24 +188,22 @@ export default function MonitoringPage() {
           {errorLogs.map((log) => (
             <div
               key={log.id}
-              className={`flex items-start gap-3 border-l-4 border-2 border-foreground/10 p-3 ${
-                log.level === "error"
+              className={`flex items-start gap-3 border-l-4 border-2 border-foreground/10 p-3 ${log.level === "error"
                   ? "border-l-red-600"
                   : log.level === "warning"
-                  ? "border-l-amber-600"
-                  : "border-l-blue-600"
-              }`}
+                    ? "border-l-amber-600"
+                    : "border-l-blue-600"
+                }`}
             >
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${
-                      log.level === "error"
+                    className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${log.level === "error"
                         ? "border-red-900 bg-red-100 text-red-900"
                         : log.level === "warning"
-                        ? "border-amber-900 bg-amber-100 text-amber-900"
-                        : "border-blue-900 bg-blue-100 text-blue-900"
-                    }`}
+                          ? "border-amber-900 bg-amber-100 text-amber-900"
+                          : "border-blue-900 bg-blue-100 text-blue-900"
+                      }`}
                   >
                     {log.level}
                   </span>

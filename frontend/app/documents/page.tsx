@@ -62,7 +62,7 @@ export default function DocumentsPage() {
   // Citizens list for citizen picker
   const [citizens, setCitizens] = useState<Citizen[]>([])
   useEffect(() => {
-    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens)).catch(() => {})
+    fetchCitizens({ limit: 200 }).then((r) => setCitizens(r.citizens)).catch(() => { })
   }, [])
 
   const startRecording = useCallback(async () => {
@@ -298,11 +298,10 @@ export default function DocumentsPage() {
           <button
             onClick={isRecording ? stopRecording : startRecording}
             disabled={isProcessingVoice}
-            className={`flex items-center gap-2 border-2 px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 ${
-              isRecording
+            className={`flex items-center gap-2 border-2 px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-[3px_3px_0px_0px] shadow-foreground/20 transition-all hover:shadow-[5px_5px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5 ${isRecording
                 ? "border-red-600 bg-red-600 text-white animate-pulse"
                 : "border-foreground bg-orange-600 text-white"
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
             title={isRecording ? "Stop recording" : "Record voice (Bhashini ASR) — auto-classifies as Document or Issue"}
           >
             {isProcessingVoice ? (
@@ -656,12 +655,12 @@ export default function DocumentsPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Speak in</label>
-                      <select value={docTtsLang} onChange={(e) =>
-<option value="en">English</option>
-<option value="hi">Hindi</option>
-<option value="ur">Urdu</option>
-<option value="pa">Punjabi</option>
-</select>
+                      <select value={docTtsLang} onChange={(e) => setDocTtsLang(e.target.value)} className="mt-0.5 block border border-foreground/50 bg-background px-2 py-1 text-xs">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ur">Urdu</option>
+                        <option value="pa">Punjabi</option>
+                      </select>
                     </div>
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Voice</label>
@@ -680,12 +679,12 @@ export default function DocumentsPage() {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Translate to</label>
-                      <select value={docTransLang} onChange={(e) =>
-<option value="en">English</option>
-<option value="hi">Hindi</option>
-<option value="ur">Urdu</option>
-<option value="pa">Punjabi</option>
-</select>
+                      <select value={docTransLang} onChange={(e) => setDocTransLang(e.target.value)} className="mt-0.5 block border border-foreground/50 bg-background px-2 py-1 text-xs">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="ur">Urdu</option>
+                        <option value="pa">Punjabi</option>
+                      </select>
                     </div>
                     <button onClick={handleDocTranslate} disabled={docTransLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-blue-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-blue-700 disabled:opacity-50">
                       {docTransLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />}

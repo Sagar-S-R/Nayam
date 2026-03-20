@@ -82,6 +82,9 @@ class Issue(Base):
         nullable=False,
     )
 
+    # ── SLA Tracking ─────────────────────────────────────────────
+    sla_deadline = Column(DateTime(timezone=True), nullable=True)
+
     # ── Geo Metadata (Phase 2) ───────────────────────────────────
     latitude = Column(Float, nullable=True, default=None)
     longitude = Column(Float, nullable=True, default=None)
@@ -97,6 +100,7 @@ class Issue(Base):
         Index("ix_issues_priority", "priority"),
         Index("ix_issues_created_at", "created_at"),
         Index("ix_issues_geo", "latitude", "longitude"),
+        Index("ix_issues_sla", "sla_deadline"),
     )
 
     def __repr__(self) -> str:

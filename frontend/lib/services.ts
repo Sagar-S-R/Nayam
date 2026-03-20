@@ -88,7 +88,7 @@ export async function fetchCitizens(params?: {
   ward?: string
   search?: string
 }): Promise<{ total: number; citizens: Citizen[] }> {
-  const data = await api.get<CitizenListResponse>("/citizens", params as Record<string, string>)
+  const data = await api.get<CitizenListResponse>("/citizens", params)
 
   // Fetch issue counts per citizen (batch via issues endpoint)
   const issueData = await api.get<IssueListResponse>("/issues", { limit: 500 })
@@ -142,6 +142,8 @@ function mapIssue(i: IssueBackend, citizenName: string = "Unknown"): Issue {
     department: i.department,
     status: statusMap[i.status] || "open",
     priority: priorityMap[i.priority] || "medium",
+    slaDeadline: i.sla_deadline,
+    isOverdue: i.is_overdue || false,
     ward: "",
     riskScore: priorityScore[i.priority] || 50,
     createdDate: i.created_at.split("T")[0],
@@ -156,12 +158,14 @@ export async function fetchIssues(params?: {
   priority?: string
   department?: string
   ward?: string
+  overdue?: boolean
 }): Promise<{ total: number; issues: Issue[] }> {
   // Map frontend status values to backend enum values
-  const backendParams: Record<string, string | number | undefined> = {
+  const backendParams: Record<string, string | number | undefined | boolean> = {
     skip: params?.skip,
     limit: params?.limit,
     department: params?.department,
+    overdue: params?.overdue,
   }
 
   if (params?.status) {
@@ -182,7 +186,7 @@ export async function fetchIssues(params?: {
     backendParams.priority = reversePriorityMap[params.priority] || params.priority
   }
 
-  const data = await api.get<IssueListResponse>("/issues", backendParams as Record<string, string>)
+  const data = await api.get<IssueListResponse>("/issues", backendParams)
 
   // Fetch citizen names for display
   const citizenIds = [...new Set(data.issues.map((i) => i.citizen_id))]
@@ -237,7 +241,7 @@ export async function fetchDocuments(params?: {
   skip?: number
   limit?: number
 }): Promise<{ total: number; documents: Document[] }> {
-  const data = await api.get<DocumentListResponse>("/documents", params as Record<string, string>)
+  const data = await api.get<DocumentListResponse>("/documents", params)
   return {
     total: data.total,
     documents: data.documents.map(mapDocument),
@@ -331,11 +335,11 @@ export async function reviewAction(
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function fetchActions(params?: { skip?: number; limit?: number; status?: string }) {
-  return api.get<ActionRequestListResponse>("/actions", params as Record<string, string>)
+  return api.get<ActionRequestListResponse>("/actions", params)
 }
 
 export async function fetchComplianceExports(params?: { skip?: number; limit?: number }) {
-  return api.get<{ total: number; exports: unknown[] }>("/compliance/exports", params as Record<string, string>)
+  return api.get<{ total: number; exports: unknown[] }>("/compliance/exports", params)
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -347,7 +351,7 @@ export async function fetchHealthDeep(): Promise<HealthProbeResponse> {
 }
 
 export async function fetchMetrics(params?: { category?: string; limit?: number }) {
-  return api.get<MetricListResponse>("/monitoring/metrics", params as Record<string, string>)
+  return api.get<MetricListResponse>("/monitoring/metrics", params)
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -399,11 +403,11 @@ export async function fetchEvents(params?: {
   event_type?: string
   department?: string
 }): Promise<EventListResponse> {
-  return api.get<EventListResponse>("/schedule", params as Record<string, string>)
+  return api.get<EventListResponse>("/schedule", params)
 }
 
 export async function fetchUpcomingEvents(limit: number = 10): Promise<EventListResponse> {
-  return api.get<EventListResponse>("/schedule/upcoming/list", { limit } as Record<string, string>)
+  return api.get<EventListResponse>("/schedule/upcoming/list", { limit })
 }
 
 export async function createEvent(payload: EventCreateRequest): Promise<EventBackend> {
@@ -433,7 +437,7 @@ export async function fetchDrafts(params?: {
   status?: string
   department?: string
 }): Promise<DraftListResponse> {
-  return api.get<DraftListResponse>("/drafts", params as Record<string, string>)
+  return api.get<DraftListResponse>("/drafts", params)
 }
 
 export async function getDraft(id: string): Promise<DraftBackend> {
@@ -511,9 +515,5 @@ export async function meetingModeAudio(audioBlob: Blob): Promise<any> {
   const formData = new FormData()
   formData.append("file", audioBlob, "meeting_audio.wav")
 
-  return api.post<any>("/stt/meeting-mode", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  })
+  return api.upload<any>("/stt/meeting-mode", formData)
 }

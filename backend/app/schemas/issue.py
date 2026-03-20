@@ -4,11 +4,11 @@ NAYAM (नयम्) — Issue Pydantic Schemas.
 Request/response models for issue management with filtering support.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.models.issue import IssueStatus, IssuePriority
 
@@ -48,11 +48,29 @@ class IssueResponse(BaseModel):
     description: str
     status: IssueStatus
     priority: IssuePriority
+    sla_deadline: Optional[datetime]
     latitude: Optional[float]
     longitude: Optional[float]
     location_description: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    def is_overdue(self) -> bool:
+        if not self.sla_deadline:
+            return False
+        if self.status == IssueStatus.CLOSED:
+            return False
+        
+        # Make sure we compare aware datetimes
+        now = datetime.now(timezone.utc)
+        # If sla_deadline is naive (e.g. from sqlite testing), make it aware
+        if self.sla_deadline.tzinfo is None:
+            deadline = self.sla_deadline.replace(tzinfo=timezone.utc)
+        else:
+            deadline = self.sla_deadline
+            
+        return now > deadline
 
     model_config = {"from_attributes": True}
 

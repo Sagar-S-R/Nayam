@@ -63,6 +63,7 @@ def list_issues(
     department: Optional[str] = Query(None, description="Filter by department"),
     citizen_id: Optional[UUID] = Query(None, description="Filter by citizen"),
     ward: Optional[str] = Query(None, description="Filter by citizen ward"),
+    overdue: Optional[bool] = Query(None, description="Filter by overdue status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> IssueListResponse:
@@ -80,6 +81,7 @@ def list_issues(
         department=department,
         citizen_id=citizen_id,
         ward=ward,
+        overdue=overdue,
     )
     return IssueListResponse(
         total=total,

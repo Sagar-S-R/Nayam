@@ -54,6 +54,8 @@ export interface IssueBackend {
   description: string
   status: "Open" | "In Progress" | "Closed"
   priority: "Low" | "Medium" | "High"
+  sla_deadline: string | null
+  is_overdue: boolean
   latitude: number | null
   longitude: number | null
   location_description: string | null
@@ -73,6 +75,8 @@ export interface Issue {
   department: string
   status: "open" | "in-progress" | "resolved" | "escalated"
   priority: "low" | "medium" | "high" | "critical"
+  slaDeadline: string | null
+  isOverdue: boolean
   ward: string
   riskScore: number
   createdDate: string
@@ -117,6 +121,7 @@ export interface StatusCount {
 
 export interface DashboardResponse {
   total_issues: number
+  overdue_issues: number
   issues_by_department: DepartmentCount[]
   issues_by_status: StatusCount[]
   total_documents: number

@@ -49,6 +49,7 @@ class IssueRepository:
         department: Optional[str] = None,
         citizen_id: Optional[UUID] = None,
         ward: Optional[str] = None,
+        overdue: Optional[bool] = None,
     ) -> Tuple[List[Issue], int]:
         """
         Retrieve a paginated, filtered list of issues.
@@ -61,6 +62,7 @@ class IssueRepository:
             department: Optional department filter.
             citizen_id: Optional citizen FK filter.
             ward: Optional ward filter (joins through citizen).
+            overdue: Optional overdue filter based on SLA.
 
         Returns:
             Tuple of (list of issues, total count).
@@ -77,6 +79,13 @@ class IssueRepository:
             query = query.filter(Issue.citizen_id == citizen_id)
         if ward:
             query = query.join(Citizen, Issue.citizen_id == Citizen.id).filter(Citizen.ward == ward)
+        if overdue is not None:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            if overdue:
+                query = query.filter(Issue.sla_deadline < now, Issue.status != IssueStatus.CLOSED)
+            else:
+                query = query.filter((Issue.sla_deadline >= now) | (Issue.status == IssueStatus.CLOSED))
 
         total = query.count()
         issues = query.order_by(Issue.created_at.desc()).offset(skip).limit(limit).all()
@@ -160,3 +169,18 @@ class IssueRepository:
             Integer count of all issues.
         """
         return self.db.query(Issue).count()
+
+    def count_overdue(self) -> int:
+        """
+        Count issues that are past their SLA deadline and not closed.
+
+        Returns:
+            Integer count of overdue issues.
+        """
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        return self.db.query(Issue).filter(
+            Issue.sla_deadline < now,
+            Issue.status != IssueStatus.CLOSED
+        ).count()
+

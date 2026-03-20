@@ -49,6 +49,7 @@ class DashboardService:
         """
         # Total issues (single COUNT query)
         total_issues = self.issue_repo.total_count()
+        overdue_issues = self.issue_repo.count_overdue()
 
         # Issues by department (GROUP BY query)
         dept_counts = self.issue_repo.count_by_department()
@@ -79,6 +80,7 @@ class DashboardService:
 
         return DashboardResponse(
             total_issues=total_issues,
+            overdue_issues=overdue_issues,
             issues_by_department=issues_by_department,
             issues_by_status=issues_by_status,
             total_documents=total_documents,
