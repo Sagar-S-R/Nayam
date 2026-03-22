@@ -426,7 +426,7 @@ class TestCitizenAgent:
         ctx = AgentContext(
             session_id=uuid.uuid4(),
             user_id=uuid.uuid4(),
-            query="How many complaints in Ward-5?",
+            query="How many complaints in Saket?",
         )
         resp = agent.execute(ctx)
         assert resp.agent_name == "CitizenAgent"

@@ -40,13 +40,13 @@ class TestRiskScoreModel:
 
     def test_create_risk_score_defaults(self, db_session: Session) -> None:
         """Creating a RiskScore with required fields populates defaults."""
-        rs = RiskScore(ward="Ward-01")
+        rs = RiskScore(ward="Dwarka")
         db_session.add(rs)
         db_session.commit()
         db_session.refresh(rs)
 
         assert rs.id is not None
-        assert rs.ward == "Ward-01"
+        assert rs.ward == "Dwarka"
         assert rs.score == 0.0
         assert rs.risk_level == RiskLevel.LOW
         assert rs.issue_count == 0
