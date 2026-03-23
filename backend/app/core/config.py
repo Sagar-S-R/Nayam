@@ -109,7 +109,12 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> List[str]:
         """Parse comma-separated CORS origins into a list."""
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        # In production: only allow specific origins
+        if self.is_production:
+            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+
+        # In development: allow all origins (for Cloudflare tunnel flexibility)
+        return ["*"]
 
     @property
     def max_upload_bytes(self) -> int:
