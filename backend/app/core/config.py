@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
 
     # ── CORS ─────────────────────────────────────────────────────
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000,https://nayam.vercel.app"
 
     # ── Phase 2: AI / Agent Configuration ────────────────────────
     GROQ_API_KEY: str = ""
