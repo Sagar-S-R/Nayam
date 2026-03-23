@@ -428,7 +428,7 @@ class STTService:
     Full STT pipeline service: transcribe → classify → route → ingest.
 
     This service answers the core question: when someone speaks about
-    "a new water supply policy draft" vs "Ward-3 has a water pipe burst",
+    "a new water supply policy draft" vs "Karol Bagh has a water pipe burst",
     how does the system know the first is a Document and the second is an Issue?
 
     Answer: The LLM classifier examines the transcript's intent, language

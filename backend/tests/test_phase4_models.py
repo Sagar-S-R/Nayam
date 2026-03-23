@@ -61,7 +61,7 @@ class TestSyncQueueModel:
             operation=SyncOperation.UPDATE,
             resource_type="citizen",
             resource_id=res_id,
-            payload={"name": "Updated Name", "ward": "Ward-05"},
+            payload={"name": "Updated Name", "ward": "Saket"},
             version=3,
             status=SyncStatus.IN_PROGRESS,
             priority=1,
