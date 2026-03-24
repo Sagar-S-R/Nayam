@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "sonner"
+import { api } from "@/lib/api"
 
 type AuditEntry = {
   id: string
@@ -25,12 +26,7 @@ type AuditEntry = {
 }
 
 async function fetchAuditTrail(): Promise<{ total: number; entries: AuditEntry[] }> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("nayam_token") : null
-  const res = await fetch("/api/v1/compliance/audit-trail?limit=100", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (!res.ok) throw new Error("Failed to fetch audit trail")
-  return res.json()
+  return api.get("/compliance/audit-trail", { limit: 100 })
 }
 
 export default function CompliancePage() {
@@ -57,9 +53,13 @@ export default function CompliancePage() {
         toast.error("Not authenticated", { description: "Please log in to export." })
         return
       }
-      const response = await fetch(`/api/v1/compliance/audit-trail/pdf?include_hindi=${includeHindi}`, {
+
+      // Use centralized API client base URL
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1"
+      const response = await fetch(`${API_BASE}/compliance/audit-trail/pdf?include_hindi=${includeHindi}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+
       if (response.status === 403) {
         toast.error("Access denied", { description: "You need Leader or Analyst role." })
         return

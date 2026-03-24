@@ -5,28 +5,28 @@ Delhi MCD has 12 zones with multiple wards. For Phase 4, we support
 the primary ward list: Ward-1 through Ward-8.
 """
 
-# MCD Delhi Ward List (Phase 4 - 8 primary wards)
+# MCD Delhi Ward List (Phase 4 - Real Delhi localities)
 MCD_WARDS = [
-    "Ward-1",
-    "Ward-2",
-    "Ward-3",
-    "Ward-4",
-    "Ward-5",
-    "Ward-6",
-    "Ward-7",
-    "Ward-8",
+    "Dwarka",
+    "Rohini",
+    "Karol Bagh",
+    "Lajpat Nagar",
+    "Saket",
+    "Janakpuri",
+    "Pitampura",
+    "Mayur Vihar",
 ]
 
 # Ward -> Zone mapping (for future expansion)
 WARD_TO_ZONE = {
-    "Ward-1": "North-1",
-    "Ward-2": "North-2",
-    "Ward-3": "South-1",
-    "Ward-4": "South-2",
-    "Ward-5": "Central-1",
-    "Ward-6": "Central-2",
-    "Ward-7": "East-1",
-    "Ward-8": "East-2",
+    "Dwarka": "South-West",
+    "Rohini": "North-West",
+    "Karol Bagh": "Central-North",
+    "Lajpat Nagar": "Central-South",
+    "Saket": "South",
+    "Janakpuri": "West",
+    "Pitampura": "North",
+    "Mayur Vihar": "East",
 }
 
 def get_valid_wards() -> list[str]:
