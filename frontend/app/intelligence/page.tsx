@@ -6,6 +6,7 @@ import { useApiData } from "@/hooks/use-api-data"
 import { sendAgentQuery, fetchAgents, fetchPendingApprovals, reviewAction, transcribeAudio } from "@/lib/services"
 import { SourceCitations } from "@/components/nayam/source-citations"
 import { LoadingState } from "@/components/nayam/loading-state"
+import ReactMarkdown from "react-markdown"
 import type { AgentInfo, Approval, SourceCitation } from "@/lib/types"
 
 interface Message {
@@ -215,7 +216,11 @@ export default function IntelligencePage() {
                       </span>
                     </div>
                   )}
-                  <p className="text-sm text-foreground leading-relaxed">{msg.content}</p>
+                  <div className="text-sm text-foreground leading-relaxed prose prose-sm max-w-none prose-headings:font-bold prose-p:my-2 prose-ul:my-2 prose-li:my-1">
+                    <ReactMarkdown>
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
                   {msg.sources && msg.sources.length > 0 && (
                     <SourceCitations sources={msg.sources} className="mt-3" />
                   )}

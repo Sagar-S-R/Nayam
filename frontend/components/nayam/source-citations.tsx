@@ -57,9 +57,6 @@ export function SourceCitations({ sources, className = '' }: SourceCitationsProp
                     <FileText size={14} className="inline mr-1 -mt-0.5" />
                     {source.document_title}
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    Chunk {source.chunk_index + 1} · {scorePercent}% relevance
-                  </div>
                 </div>
               </button>
 

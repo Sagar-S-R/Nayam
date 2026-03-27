@@ -32,32 +32,14 @@ import {
 } from "@/lib/services"
 import type { Citizen } from "@/lib/types"
 
-// ── Language catalogue ──────────────────────────────────────────────
+// ── Language catalogue (restricted to 5 supported languages) ──────────
 
 const LANGUAGES: { code: string; label: string; native: string }[] = [
-  { code: "hi", label: "Hindi", native: "हिन्दी" },
   { code: "en", label: "English", native: "English" },
-  { code: "bn", label: "Bengali", native: "বাংলা" },
-  { code: "ta", label: "Tamil", native: "தமிழ்" },
-  { code: "te", label: "Telugu", native: "తెలుగు" },
-  { code: "mr", label: "Marathi", native: "मराठी" },
-  { code: "gu", label: "Gujarati", native: "ગુજરાતી" },
-  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ" },
-  { code: "ml", label: "Malayalam", native: "മലയാളം" },
+  { code: "hi", label: "Hindi", native: "हिन्दी" },
   { code: "pa", label: "Punjabi", native: "ਪੰਜਾਬੀ" },
-  { code: "or", label: "Odia", native: "ଓଡ଼ିଆ" },
-  { code: "as", label: "Assamese", native: "অসমীয়া" },
+  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ" },
   { code: "ur", label: "Urdu", native: "اردو" },
-  { code: "sa", label: "Sanskrit", native: "संस्कृतम्" },
-  { code: "mai", label: "Maithili", native: "मैथिली" },
-  { code: "doi", label: "Dogri", native: "डोगरी" },
-  { code: "ks", label: "Kashmiri", native: "كٲشُر" },
-  { code: "kok", label: "Konkani", native: "कोंकणी" },
-  { code: "mni", label: "Manipuri", native: "মৈতৈলোন্" },
-  { code: "ne", label: "Nepali", native: "नेपाली" },
-  { code: "sd", label: "Sindhi", native: "سنڌي" },
-  { code: "sat", label: "Santali", native: "ᱥᱟᱱᱛᱟᱲᱤ" },
-  { code: "brx", label: "Bodo", native: "बड़ो" },
 ]
 
 type TabType = "asr" | "tts" | "translate" | "meeting"

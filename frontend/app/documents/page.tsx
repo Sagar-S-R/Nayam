@@ -280,17 +280,10 @@ export default function DocumentsPage() {
             className="border-2 border-foreground bg-background px-2 py-2 text-xs font-bold uppercase tracking-wider text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             title="Voice language (Bhashini ASR)"
           >
-            <option value="hi">🇮🇳 Hindi</option>
             <option value="en">🇬🇧 English</option>
-            <option value="bn">🇮🇳 Bengali</option>
-            <option value="ta">🇮🇳 Tamil</option>
-            <option value="te">🇮🇳 Telugu</option>
-            <option value="mr">🇮🇳 Marathi</option>
-            <option value="gu">🇮🇳 Gujarati</option>
-            <option value="kn">🇮🇳 Kannada</option>
-            <option value="ml">🇮🇳 Malayalam</option>
+            <option value="hi">🇮🇳 Hindi</option>
             <option value="pa">🇮🇳 Punjabi</option>
-            <option value="or">🇮🇳 Odia</option>
+            <option value="kn">🇮🇳 Kannada</option>
             <option value="ur">🇮🇳 Urdu</option>
           </select>
 
@@ -658,8 +651,9 @@ export default function DocumentsPage() {
                       <select value={docTtsLang} onChange={(e) => setDocTtsLang(e.target.value)} className="mt-0.5 block border border-foreground/50 bg-background px-2 py-1 text-xs">
                         <option value="en">English</option>
                         <option value="hi">Hindi</option>
-                        <option value="ur">Urdu</option>
                         <option value="pa">Punjabi</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ur">Urdu</option>
                       </select>
                     </div>
                     <div>
@@ -682,8 +676,9 @@ export default function DocumentsPage() {
                       <select value={docTransLang} onChange={(e) => setDocTransLang(e.target.value)} className="mt-0.5 block border border-foreground/50 bg-background px-2 py-1 text-xs">
                         <option value="en">English</option>
                         <option value="hi">Hindi</option>
-                        <option value="ur">Urdu</option>
                         <option value="pa">Punjabi</option>
+                        <option value="kn">Kannada</option>
+                        <option value="ur">Urdu</option>
                       </select>
                     </div>
                     <button onClick={handleDocTranslate} disabled={docTransLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-blue-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-blue-700 disabled:opacity-50">

@@ -311,17 +311,10 @@ export default function IssuesPage() {
                   onChange={(e) => setVoiceLang(e.target.value)}
                   className="flex-1 border-2 border-foreground bg-background px-2 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="hi">Hindi</option>
                   <option value="en">English</option>
-                  <option value="bn">Bengali</option>
-                  <option value="ta">Tamil</option>
-                  <option value="te">Telugu</option>
-                  <option value="mr">Marathi</option>
-                  <option value="gu">Gujarati</option>
-                  <option value="kn">Kannada</option>
-                  <option value="ml">Malayalam</option>
+                  <option value="hi">Hindi</option>
                   <option value="pa">Punjabi</option>
-                  <option value="or">Odia</option>
+                  <option value="kn">Kannada</option>
                   <option value="ur">Urdu</option>
                 </select>
                 <button

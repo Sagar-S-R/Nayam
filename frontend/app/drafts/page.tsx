@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import ReactMarkdown from "react-markdown"
 import {
   PenTool,
   Sparkles,
@@ -731,10 +732,10 @@ export default function DraftsPage() {
                   className="w-full border-2 border-foreground bg-background px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-y"
                 />
               ) : (
-                <div className="prose prose-sm max-w-none text-foreground">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                <div className="prose prose-sm max-w-none text-foreground prose-headings:font-bold prose-p:my-2 prose-ul:my-2 prose-li:my-1">
+                  <ReactMarkdown>
                     {selectedDraft.content}
-                  </pre>
+                  </ReactMarkdown>
                 </div>
               )}
 

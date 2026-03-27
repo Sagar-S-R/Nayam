@@ -117,15 +117,17 @@ def get_export(
 )
 def export_audit_trail_pdf(
     include_hindi: bool = Query(True, description="Include Hindi translations in PDF"),
+    limit: int = Query(100, ge=1, le=500, description="Number of audit entries to export"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles([UserRole.LEADER, UserRole.ANALYST])),
 ) -> StreamingResponse:
     """
-    Generate and download a PDF report of the last 50 audit trail entries.
-    
+    Generate and download a PDF report of audit trail entries.
+
     Query Parameters:
         include_hindi: Include Hindi translations (default: true)
-    
+        limit: Number of entries to export (default: 100, max: 500)
+
     The PDF includes:
     - NAYAM header with branding
     - Generation timestamp and user info
@@ -133,14 +135,40 @@ def export_audit_trail_pdf(
     - Page numbers and pagination
     - Optional Hindi subtitle (नयम् - शासन प्रबंधन प्रणाली)
     """
-    # Fetch last 50 action requests, ordered by creation date (newest first)
-    audit_entries = (
-        db.query(ActionRequest)
-        .options(joinedload(ActionRequest.requester))
-        .order_by(desc(ActionRequest.created_at))
-        .limit(50)
-        .all()
-    )
+    from app.observability.models import AuditLog
+    from app.models.user import User as UserModel
+
+    # Fetch audit log entries (same data as the Compliance page shows)
+    query = db.query(AuditLog).order_by(desc(AuditLog.created_at))
+    audit_log_entries = query.limit(limit).all()
+
+    # Convert AuditLog entries to ActionRequest-like structure for PDF generation
+    # (so we don't break the existing PDF generator)
+    audit_entries = []
+    for e in audit_log_entries:
+        # Get actor info
+        actor_name = "System"
+        actor_role = "system"
+        requester = None
+        if e.user_id:
+            user = db.query(UserModel).filter(UserModel.id == e.user_id).first()
+            if user:
+                actor_name = user.name or user.email
+                actor_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+                requester = user
+
+        # Create a pseudo-ActionRequest object for the PDF generator
+        class PseudoActionRequest:
+            def __init__(self, audit_entry, requester):
+                self.id = audit_entry.id
+                self.created_at = audit_entry.created_at
+                self.action_type = audit_entry.action.value if hasattr(audit_entry.action, "value") else str(audit_entry.action)
+                self.description = audit_entry.description or f"{audit_entry.resource_type} action"
+                self.status = "completed"  # Audit logs are completed actions
+                self.requester = requester
+                self.agent_name = "AI" if audit_entry.metadata_json and audit_entry.metadata_json.get("ai_generated") else None
+
+        audit_entries.append(PseudoActionRequest(e, requester))
 
     # Generate PDF with optional hindi support
     pdf_bytes = generate_audit_trail_pdf(
