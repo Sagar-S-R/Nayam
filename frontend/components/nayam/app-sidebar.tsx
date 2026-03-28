@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   CalendarDays,
   PenTool,
+  Mic,
 } from "lucide-react"
 
 // Bhashini icon — uses dedicated logo from /public
@@ -48,6 +49,7 @@ const mainNav = [
 const intelligenceNav = [
   { title: "Intelligence", href: "/intelligence", icon: Brain },
   { title: "Bhashini", href: "/bhashini", icon: BhashiniIcon },
+  { title: "Meeting Mode", href: "/meeting-mode", icon: Mic },
   { title: "Drafts", href: "/drafts", icon: PenTool },
   { title: "Geo Analytics", href: "/geo-analytics", icon: MapPin },
   { title: "Predictive Insights", href: "/predictive", icon: TrendingUp },

@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { AuthProvider } from "@/lib/auth-context"
+import { SessionExpiryProvider } from "@/components/nayam/session-expiry-provider"
 import { AuthGuard } from "@/components/nayam/auth-guard"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/nayam/app-sidebar"
@@ -56,22 +57,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      {showSplash && <HeroSplash onFinish={handleSplashFinish} />}
-      {isLoginPage ? (
-        // Bare layout for login — no sidebar, no topbar, no auth guard
-        <>{children}</>
-      ) : (
-        // Protected layout with sidebar and topbar
-        <AuthGuard>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <Topbar />
-              <div className="flex-1 overflow-auto">{children}</div>
-            </SidebarInset>
-          </SidebarProvider>
-        </AuthGuard>
-      )}
+      <SessionExpiryProvider>
+        {showSplash && <HeroSplash onFinish={handleSplashFinish} />}
+        {isLoginPage ? (
+          // Bare layout for login — no sidebar, no topbar, no auth guard
+          <>{children}</>
+        ) : (
+          // Protected layout with sidebar and topbar
+          <AuthGuard>
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <Topbar />
+                <div className="flex-1 overflow-auto">{children}</div>
+              </SidebarInset>
+            </SidebarProvider>
+          </AuthGuard>
+        )}
+      </SessionExpiryProvider>
     </AuthProvider>
   )
 }

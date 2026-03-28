@@ -28,6 +28,7 @@ import type {
   TranscribeResponse,
   TranscribeAndClassifyResponse,
   TranscribeAndIngestResponse,
+  MeetingModeResponse,
   NotificationsResponse,
   EventListResponse,
   EventBackend,
@@ -383,6 +384,13 @@ export async function transcribeAndIngest(
   formData.append("file", audioBlob, filename || "recording.webm")
   if (sessionId) formData.append("session_id", sessionId)
   return api.upload<TranscribeAndIngestResponse>("/stt/ingest", formData)
+}
+
+/** Meeting Mode: Audio → Transcript → Extract MoM & Action Items */
+export async function processAsMeetingMode(audioBlob: Blob, filename?: string): Promise<MeetingModeResponse> {
+  const formData = new FormData()
+  formData.append("file", audioBlob, filename || "meeting.webm")
+  return api.upload<MeetingModeResponse>("/stt/meeting-mode", formData)
 }
 
 // ═══════════════════════════════════════════════════════════════════════

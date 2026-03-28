@@ -618,7 +618,7 @@ export default function IssuesPage() {
                 <div className="flex flex-wrap items-end gap-3">
                   {/* TTS */}
                   <div className="flex items-end gap-2">
-                    <div>
+                    {/* <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Speak in</label>
                       <select value={detailTtsLang} onChange={(e) => setDetailTtsLang(e.target.value)} className="mt-0.5 block w-24 border border-foreground/50 bg-background px-2 py-1 text-xs">
                         <option value="en">English</option>
@@ -626,18 +626,18 @@ export default function IssuesPage() {
                         <option value="ur">Urdu</option>
                         <option value="pa">Punjabi</option>
                       </select>
-                    </div>
-                    <div>
+                    </div> */}
+                    {/* <div>
                       <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Voice</label>
                       <select value={detailTtsGender} onChange={(e) => setDetailTtsGender(e.target.value as "male" | "female")} className="mt-0.5 block w-20 border border-foreground/50 bg-background px-2 py-1 text-xs">
                         <option value="female">Female</option>
                         <option value="male">Male</option>
                       </select>
-                    </div>
-                    <button onClick={handleDetailTTS} disabled={detailTtsLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-orange-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-orange-700 disabled:opacity-50">
+                    </div> */}
+                    {/* <button onClick={handleDetailTTS} disabled={detailTtsLoading} className="flex items-center gap-1.5 border-2 border-foreground bg-orange-600 px-3 py-1 text-xs font-bold uppercase text-white hover:bg-orange-700 disabled:opacity-50">
                       {detailTtsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Volume2 className="h-3 w-3" />}
                       Speak
-                    </button>
+                    </button> */}
                   </div>
 
                   {/* Translate */}

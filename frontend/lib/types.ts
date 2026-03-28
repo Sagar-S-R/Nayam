@@ -275,6 +275,29 @@ export interface TranscribeAndIngestResponse extends TranscribeResponse {
   ingestion: IngestResult
 }
 
+// ── Meeting Mode ───────────────────────────────────────────────────
+export interface ActionItemExtracted {
+  task: string
+  department: string
+  deadline: string | null
+}
+
+export interface MeetingExtractionResult {
+  summary: string
+  key_decisions: string[]
+  action_items: ActionItemExtracted[]
+  departments: string[]
+  priority_issues: string[]
+}
+
+export interface MeetingModeResponse {
+  transcript: string
+  provider: string
+  extraction: MeetingExtractionResult
+  meeting_draft_id?: string
+  created_action_requests: number
+}
+
 // ── Notifications ───────────────────────────────────────────────────
 export interface NotificationItem {
   id: string

@@ -26,6 +26,14 @@ if (typeof window !== "undefined") {
       : `(from NEXT_PUBLIC_API_URL="${process.env.NEXT_PUBLIC_API_URL}")`
   )
 }
+// Global handler for 401 errors
+let onUnauthorized: (() => void) | null = null
+
+/** Register a callback to be invoked when a 401 occurs */
+export function setUnauthorizedHandler(handler: () => void): void {
+  onUnauthorized = handler
+}
+
 /** Retrieve the stored JWT token */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null
@@ -167,6 +175,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
       `[NAYAM API Error] ${res.status} ${res.statusText}`,
       { detail, url: res.url }
     )
+
+    // Handle 401 Unauthorized - token expired or invalid
+    if (res.status === 401 && onUnauthorized) {
+      onUnauthorized()
+    }
 
     throw new ApiError(res.status, detail)
   }

@@ -3,11 +3,11 @@
 import { useState, useRef, useCallback } from "react"
 import { Send, Brain, User, Sparkles, CheckCircle, XCircle, Loader2, Mic, MicOff, AudioLines } from "lucide-react"
 import { useApiData } from "@/hooks/use-api-data"
-import { sendAgentQuery, fetchAgents, fetchPendingApprovals, reviewAction, transcribeAudio } from "@/lib/services"
+import { sendAgentQuery, fetchPendingApprovals, reviewAction, transcribeAudio } from "@/lib/services"
 import { SourceCitations } from "@/components/nayam/source-citations"
 import { LoadingState } from "@/components/nayam/loading-state"
 import ReactMarkdown from "react-markdown"
-import type { AgentInfo, Approval, SourceCitation } from "@/lib/types"
+import type { Approval, SourceCitation } from "@/lib/types"
 
 interface Message {
   id: number
@@ -28,7 +28,6 @@ export default function IntelligencePage() {
     },
   ])
   const [input, setInput] = useState("")
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | undefined>()
   const [isSending, setIsSending] = useState(false)
 
@@ -89,21 +88,10 @@ export default function IntelligencePage() {
     setIsRecording(false)
   }, [])
 
-  const { data: agentList } = useApiData<AgentInfo[]>(() => fetchAgents(), [])
   const { data: pendingApprovals, refetch: refetchApprovals } = useApiData<Approval[]>(() => fetchPendingApprovals(), [])
 
-  // Map backend agents to UI tabs with short names.
-  const agentShortName = (name: string) => name.replace(/Agent$/i, "")
-  const agents = agentList && agentList.length > 0
-    ? agentList.map((a) => ({ id: a.name, label: agentShortName(a.name) }))
-    : [
-        { id: "CitizenAgent", label: "Citizen" },
-        { id: "PolicyAgent", label: "Policy" },
-        { id: "OperationsAgent", label: "Operations" },
-      ]
-
-  // Default to first agent once list is loaded
-  const activeAgent = selectedAgent || agents[0]?.id || null
+  // Always use PolicyAgent - no agent switching
+  const activeAgent = "PolicyAgent"
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return
@@ -165,27 +153,6 @@ export default function IntelligencePage() {
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Chat Area */}
         <div className="flex flex-1 flex-col border-3 border-foreground bg-card shadow-[4px_4px_0px_0px] shadow-foreground/20">
-          {/* Agent Selector */}
-          <div className="flex items-center gap-2 border-b-2 border-foreground px-4 py-3 overflow-x-auto">
-            <Brain className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
-              Agent:
-            </span>
-            {agents.map((agent) => (
-              <button
-                key={agent.id}
-                onClick={() => setSelectedAgent(agent.id)}
-                className={`shrink-0 border-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                  activeAgent === agent.id
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-foreground/30 bg-background text-foreground hover:border-foreground"
-                }`}
-              >
-                {agent.label}
-              </button>
-            ))}
-          </div>
-
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg) => (

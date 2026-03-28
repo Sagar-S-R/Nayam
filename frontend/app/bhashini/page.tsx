@@ -79,7 +79,7 @@ export default function BhashiniPage() {
                 Bhashini
               </h1>
               <p className="text-xs font-medium text-muted-foreground">
-                Government of India AI Language Services — 22+ Indian Languages
+                Government of India AI Language Services — 4+ Indian Languages
               </p>
             </div>
           </div>
